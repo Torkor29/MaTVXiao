@@ -43,7 +43,10 @@ import java.util.concurrent.Executors;
  * Without photos (no TMDB key, or before the first fetch): the big clock over the night aurora.
  */
 final class DreamView extends View implements Choreographer.FrameCallback, HomeData.Listener, Recs.Listener {
-    private static final long SHOW_MS = 30_000, FADE_MS = 3_000, FIRST_MS = 1_600;
+    private static final long FADE_MS = 3_000, FIRST_MS = 1_600;
+    /** How long each image stays (Prefs.saverSeconds; read when the screensaver starts). */
+    private long SHOW_MS = 30_000;
+    private boolean showClock = true, showCaption = true;
     private static final float ZOOM = 0.1f;
     /** Photos 10% larger than the screen (the zoom goes up to 1.1 without upscaling). */
     private static final int PW = 2112, PH = 1188;
@@ -179,6 +182,13 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
     void start() {
         if (running) return;
         running = true;
+        try {
+            SHOW_MS = Prefs.saverSeconds() * 1000L;
+            showClock = Prefs.saverClock();
+            showCaption = Prefs.saverCaption();
+        } catch (RuntimeException e) {
+            AppLog.w("screensaver settings: " + e.getMessage());
+        }
         if (worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         startedAt = clock();
         lastFrame = 0;
@@ -292,9 +302,9 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
 
     /** Art mode's paintings when it is on and some are ready, else your photos when they are on, otherwise the picks'. */
     private List<Recs.Pick> photos() {
-        if (Art.on()) {
-            if (artList == null) artList = Art.picks(getContext());
-            if (!artList.isEmpty()) return artList;
+        if (Art.on()) {   // Art mode is paintings only: until the first ones are ready, the clock over the aurora
+            if (artList == null || artList.isEmpty()) artList = Art.picks(getContext());
+            return artList;
         }
         return Photos.on(getContext()) ? Photos.picks(getContext()) : recs.showcase();
     }
@@ -341,7 +351,7 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
             Bitmap[] images = null;
             float[] light = new float[2];
             try {
-                images = Backdrop.photo(file, PW, PH, light);
+                images = Backdrop.photo(file, PW, PH, light, chosen.art);
                 images[0] = Backdrop.gpu(withScrims(images[0], chosen.photo == null || chosen.art, light[0], light[1]));
             } catch (Exception | OutOfMemoryError e) {
                 AppLog.w("screensaver: photo for “" + (chosen.photo != null ? chosen.photo.getName() : chosen.title) + "”: " + e.getMessage());
@@ -482,15 +492,17 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
             drawPhoto(canvas, incoming, placeB, e);
         }
 
-        if (chromeDirty) recordChrome();
-        chrome.setAlpha(first);
-        chrome.draw(canvas);
-        if (playingCorner != null) {
+        if (showClock) {
+            if (chromeDirty) recordChrome();
+            chrome.setAlpha(first);
+            chrome.draw(canvas);
+        }
+        if (showClock && playingCorner != null) {
             float x = RIGHT * k - playingCornerWidth - cornerCap * 0.6f - NowPlaying.barsWidth(cornerCap);
             drawBars(canvas, x, cornerBase, cornerCap, cornerQuote.getColor(), first);
         }
-        drawGlass(canvas, first, e);
-        drawCaptions(canvas, up);
+        if (showClock) drawGlass(canvas, first, e);
+        if (showCaption) drawCaptions(canvas, up);
     }
 
     /** What an app is playing, cut to fit the corner and the bottom line: once per title, not while recording. */

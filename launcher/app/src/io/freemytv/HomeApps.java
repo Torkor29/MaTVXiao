@@ -622,8 +622,8 @@ final class HomeApps {
                 if (HomeMode.AMAZON && fireInput(a, it)) return true;
                 intent = inputIntent(a, it);
                 break;
-            case SETTINGS:
-                intent = new Intent().setComponent(new ComponentName(a, SettingsActivity.class));
+            case SETTINGS:   // MaTV: the categorized Home Settings
+                intent = new Intent().setComponent(new ComponentName(a, MaTVSettingsActivity.class));
                 break;
             case ANDROID_SETTINGS:
                 intent = new Intent(Settings.ACTION_SETTINGS);

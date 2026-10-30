@@ -96,9 +96,11 @@ final class Backdrop {
             // half off the top.
             Bitmap wide = card(out, WIDE_W, WIDE_H, 0);
             int[] frost = reduce(out, FW, FH, 3, 3);
-            int[] light = whiten(frost.clone(), 0.82f);
+            // MaTV light look: the photo stays a soft, coloured pastel (more saturated, less whitened) and the glass is
+            // clearly whiter than what's behind it, so panels read as frosted white glass rather than flat gray.
+            int[] light = whiten(saturate(frost.clone(), 1.35f), 0.66f);
             int[] glass = reduce(out, GW, GH, 2, 2);
-            int[] lightGlass = whiten(glass.clone(), 0.74f);
+            int[] lightGlass = whiten(saturate(glass.clone(), 1.2f), 0.80f);
             int[] night = darken(frost.clone(), 0.76f);
             int[] nightGlass = darken(glass, 0.56f);
             if (own) {
@@ -147,6 +149,51 @@ final class Backdrop {
      * (bottom left) and the clock (top right) sit, for the scrims. Returns {photo (mutable), frosted}.
      */
     static Bitmap[] photo(java.io.File f, int w, int h, float[] light) throws java.io.IOException {
+        return photo(f, w, h, light, false);
+    }
+
+    /**
+     * `framed` (MaTV's Art mode): the whole painting, never cropped, fitted in the middle of the screen with a soft
+     * shadow, over a heavily blurred and darkened copy of itself (as a gallery wall lit in its colours).
+     */
+    static Bitmap[] photo(java.io.File f, int w, int h, float[] light, boolean framed) throws java.io.IOException {
+        if (framed) {
+            android.graphics.BitmapFactory.Options bo = new android.graphics.BitmapFactory.Options();
+            bo.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeFile(f.getPath(), bo);
+            if (bo.outWidth <= 0 || bo.outHeight <= 0) throw new java.io.IOException("unreadable image");
+            android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+            o.inSampleSize = 1;
+            while (bo.outWidth / (o.inSampleSize * 2) >= w * 0.9f && bo.outHeight / (o.inSampleSize * 2) >= h * 0.82f) o.inSampleSize *= 2;
+            Bitmap art = android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+            if (art == null) throw new java.io.IOException("unreadable image");
+            Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(out);
+            // The wall: the painting covering the screen, blurred (shrunk then scaled up) and dimmed.
+            float cover = Math.max((float) w / art.getWidth(), (float) h / art.getHeight());
+            int sw = Math.max(1, Math.round(art.getWidth() * cover / 28)), sh = Math.max(1, Math.round(art.getHeight() * cover / 28));
+            Bitmap small = Bitmap.createScaledBitmap(art, sw, sh, true);
+            Paint p = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+            c.drawBitmap(small, null, new android.graphics.RectF((w - sw * 28f) / 2, (h - sh * 28f) / 2, (w + sw * 28f) / 2, (h + sh * 28f) / 2), p);
+            small.recycle();
+            c.drawColor(0x9E000000);
+            // The painting, as large as fits with room for the clock and the caption.
+            float fit = Math.min(w * 0.84f / art.getWidth(), h * 0.78f / art.getHeight());
+            float aw = art.getWidth() * fit, ah = art.getHeight() * fit, ax = (w - aw) / 2, ay = (h - ah) / 2 - h * 0.02f;
+            Paint shadow = new Paint(Paint.ANTI_ALIAS_FLAG);
+            shadow.setColor(0xFF000000);
+            shadow.setShadowLayer(h * 0.03f, 0, h * 0.012f, 0xCC000000);
+            c.drawRect(ax, ay, ax + aw, ay + ah, shadow);
+            c.drawBitmap(art, null, new android.graphics.RectF(ax, ay, ax + aw, ay + ah), p);
+            art.recycle();
+            if (light != null && light.length >= 2) {
+                light[0] = luminance(out, 0, 0.6f, 0.5f, 0.95f);
+                light[1] = luminance(out, 0.62f, 0.04f, 0.96f, 0.36f);
+            }
+            int fw = w / PHOTO_FROST, fh = h / PHOTO_FROST;
+            Bitmap frost = Bitmap.createBitmap(reduce(out, fw, fh, 3, 2), fw, fh, Bitmap.Config.ARGB_8888);
+            return new Bitmap[] {out, frost};
+        }
         android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
         android.graphics.BitmapFactory.decodeFile(f.getPath(), bounds);
@@ -240,6 +287,21 @@ final class Backdrop {
             for (int y = 0; y < GH; y++) px[y * GW + x] = col[y];
         }
         return px;
+    }
+
+    /** More (s > 1) or less colour, around each pixel's own luminance. */
+    private static int[] saturate(int[] px, float s) {
+        for (int i = 0; i < px.length; i++) {
+            int p = px[i];
+            float r = (p >> 16) & 255, g = (p >> 8) & 255, b = p & 255;
+            float l = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            px[i] = 0xFF000000 | (clamp255(l + (r - l) * s) << 16) | (clamp255(l + (g - l) * s) << 8) | clamp255(l + (b - l) * s);
+        }
+        return px;
+    }
+
+    private static int clamp255(float v) {
+        return v < 0 ? 0 : v > 255 ? 255 : Math.round(v);
     }
 
     private static int[] whiten(int[] px, float amount) {

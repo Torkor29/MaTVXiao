@@ -86,12 +86,21 @@ final class Art {
     static void refreshIfStale(Context c, Runnable done) {
         if (!on() || busy) return;
         final Context app = c.getApplicationContext();
+        AppLog.w("art: refresh");
         JSONObject idx = read(app);
         int have = idx.optJSONArray("items") == null ? 0 : idx.optJSONArray("items").length();
-        if (have >= BATCH && System.currentTimeMillis() - idx.optLong("at") < EVERY) return;
+        boolean seeded = idx.optBoolean("seeded");
+        if (seeded && have >= BATCH && System.currentTimeMillis() - idx.optLong("at") < EVERY) return;
         busy = true;
         worker.execute(() -> {
             try {
+                if (!seeded) {
+                    seed(app);
+                    AppLog.w("art: seeded " + picks(app).size() + " paintings");
+                    if (done != null) main.post(done);
+                }
+                if (read(app).optJSONArray("items") != null && System.currentTimeMillis() - read(app).optLong("at") < EVERY
+                        && read(app).optJSONArray("items").length() >= BATCH) return;
                 fetch(app, done);
             } catch (Throwable e) {   // never crash the screensaver's process over a museum's answer
                 AppLog.w("art: " + e.getMessage());
@@ -129,6 +138,47 @@ final class Art {
         synchronized (Art.class) {
             JSONObject idx = read(c);
             idx.put("at", System.currentTimeMillis());
+            write(c, idx);
+        }
+    }
+
+    /**
+     * The paintings that ship with the app (assets/art: public domain, from The Met's Open Access), copied once into
+     * the cache so Art mode shows paintings from its very first start, before anything is downloaded. They go after
+     * the downloaded ones, and leave like them once MAX is reached.
+     */
+    private static void seed(Context c) throws Exception {
+        android.content.res.AssetManager am = c.getAssets();
+        JSONObject bundled;
+        try (InputStream in = am.open("art/art.json")) {
+            ByteArrayOutputStream b = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            for (int n; (n = in.read(buf)) > 0; ) b.write(buf, 0, n);
+            bundled = new JSONObject(b.toString("UTF-8"));
+        }
+        JSONArray items = bundled.optJSONArray("items");
+        for (int i = 0; items != null && i < items.length(); i++) {
+            JSONObject o = items.getJSONObject(i);
+            File to = new File(dir(c), o.getString("file"));
+            if (!to.exists()) {
+                try (InputStream in = am.open("art/" + o.getString("file")); OutputStream out = new FileOutputStream(to)) {
+                    byte[] buf = new byte[65536];
+                    for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                }
+            }
+        }
+        synchronized (Art.class) {
+            JSONObject idx = read(c);
+            JSONArray now = idx.optJSONArray("items");
+            if (now == null) now = new JSONArray();
+            for (int i = 0; items != null && i < items.length(); i++) {
+                JSONObject o = items.getJSONObject(i);
+                boolean dup = false;
+                for (int j = 0; j < now.length() && !dup; j++) dup = o.getString("key").equals(now.getJSONObject(j).optString("key"));
+                if (!dup && now.length() < MAX) now.put(o);
+            }
+            idx.put("items", now);
+            idx.put("seeded", true);
             write(c, idx);
         }
     }

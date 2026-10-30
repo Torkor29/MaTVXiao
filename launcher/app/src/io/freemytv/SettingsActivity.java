@@ -83,6 +83,12 @@ public class SettingsActivity extends Activity {
         super.onResume();
         if (view == null) return;
         view.resume();
+        // From MaTV's settings: straight to one of these screens or Home Settings rows ("main:<n>" or "row:<name>").
+        String open = getIntent().getStringExtra("open");
+        if (open != null) {
+            getIntent().removeExtra("open");
+            view.openDeep(open);
+        }
         // From ADB: am start -n io.freemytv/.SettingsActivity --ez screensaver true (straight to the preview).
         if (preview == null && getIntent().getBooleanExtra("screensaver", false)) {
             getIntent().removeExtra("screensaver");
@@ -915,6 +921,10 @@ public class SettingsActivity extends Activity {
                     return true;
                 case KeyEvent.KEYCODE_BACK:
                     if (screen == MAIN) return false;   // leaves the settings
+                    if (deep && screen == HOME_SETTINGS) {   // opened from MaTV's settings: back there
+                        if (!down) activity.finish();
+                        return true;
+                    }
                     if (down) {
                         if (e.getRepeatCount() == 0) backDown = true;
                     } else {
@@ -1603,6 +1613,36 @@ public class SettingsActivity extends Activity {
          * Back on Home Settings with the focus on `row`, scrolled so it shows: City, past the first screen since Continue
          * Watching's rows, came back with the focus off screen (and the picker's scroll isn't this list's).
          */
+        /** Opened from MaTV's settings for one screen: Back on Home Settings returns there. */
+        private boolean deep;
+
+        void openDeep(String where) {
+            deep = true;
+            if (where.startsWith("main:")) {
+                screen = MAIN;
+                focus = Integer.parseInt(where.substring(5));
+            } else {
+                String name = where.substring(4);
+                int row = name.equals("language") ? 0 : name.equals("city") ? CITY_ROW : name.equals("picks") ? PICKS_ROW
+                        : name.equals("watch") ? WATCH_ROW : name.equals("tmdb") ? keyRow() : name.equals("updates") ? updatesRow()
+                        : name.equals("photos") ? PHOTOS_ROW : name.equals("playing") ? PLAYING_ROW
+                        : name.equals("recents") ? RECENTS_ROW : -1;
+                if (row < 0) {   // the whole list
+                    showSettingsRow(0);
+                    invalidate();
+                    return;
+                }
+                showSettingsRow(row);
+                // A row that changes with ◀ ▶ (what's playing, Recent Apps) only gets the focus: OK would flip it.
+                if (row == PLAYING_ROW || row == RECENTS_ROW) {
+                    invalidate();
+                    return;
+                }
+            }
+            activate();
+            invalidate();
+        }
+
         private void showSettingsRow(int row) {
             screen = HOME_SETTINGS;
             int rows = settingLabels().length, visible = Math.min(SETTINGS_VISIBLE, rows);
@@ -2433,6 +2473,8 @@ public class SettingsActivity extends Activity {
             } else if (focus == 1) {
                 pause();
                 activity.showPreview();
+            } else if (focus == 2 && !deep) {   // MaTV: Home Settings are the new categorized screen
+                getContext().startActivity(new android.content.Intent(getContext(), MaTVSettingsActivity.class));
             } else if (focus == 2) {
                 screen = HOME_SETTINGS;
                 focus = 0;

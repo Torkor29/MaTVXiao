@@ -263,6 +263,25 @@ final class Prefs {
     static void setAccent(String v) { put("accent", v); }
     static int accentColor() { return ACCENT_COLORS[java.util.Arrays.asList(ACCENTS).indexOf(accent())]; }
 
+    /** How the picks show: "cards" (Apple TV-like cards) or "billboard" (Netflix-like full-screen photo). */
+    static final String[] TOP_STYLES = {"billboard", "cards"};
+    static String topStyle() { return "cards".equals(sp().getString("topStyle", "billboard")) ? "cards" : "billboard"; }
+    static void setTopStyle(String v) { put("topStyle", v); }
+
+    /** The drawer's groups: the inputs (Live TV, HDMI) and the shortcuts (Home Settings always stays). */
+    static boolean drawerInputs() { return sp().getBoolean("drawerInputs", true); }
+    static void setDrawerInputs(boolean on) { put("drawerInputs", on); }
+    static boolean drawerShortcuts() { return sp().getBoolean("drawerShortcuts", true); }
+    static void setDrawerShortcuts(boolean on) { put("drawerShortcuts", on); }
+
+    /** The dock's size on the home screen: "compact", "normal" or "large". */
+    static final String[] DOCK_SIZES = {"compact", "normal", "large"};
+    static String dockSize() {
+        String v = sp().getString("dockSize", "normal");
+        return java.util.Arrays.asList(DOCK_SIZES).contains(v) ? v : "normal";
+    }
+    static void setDockSize(String v) { put("dockSize", v); }
+
     /** What the screensaver shows: "picks" (the picks or My Photos, as before) or "art" (museum paintings). */
     static final String[] SAVER_MODES = {"picks", "art"};
     static String saverMode() {
@@ -270,6 +289,21 @@ final class Prefs {
         return "art".equals(v) ? "art" : "picks";
     }
     static void setSaverMode(String v) { put("saverMode", v); }
+
+    /** Seconds each image stays on the screensaver. */
+    static final int[] SAVER_SECONDS = {15, 30, 60, 180, 600};
+    static int saverSeconds() {
+        int v = sp().getInt("saverSeconds", 30);
+        for (int s : SAVER_SECONDS) if (s == v) return v;
+        return 30;
+    }
+    static void setSaverSeconds(int v) { put("saverSeconds", v); }
+
+    /** The screensaver's clock (with the date and weather) and the caption under each image. */
+    static boolean saverClock() { return sp().getBoolean("saverClock", true); }
+    static void setSaverClock(boolean on) { put("saverClock", on); }
+    static boolean saverCaption() { return sp().getBoolean("saverCaption", true); }
+    static void setSaverCaption(boolean on) { put("saverCaption", on); }
 
     /** Wi-Fi/Ethernet, Bluetooth and USB icons at the top-left of the home screen. */
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }

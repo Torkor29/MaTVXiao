@@ -93,7 +93,18 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // padding (the focused icon grows 20% without touching its edge). The icons are 16:9, the shape of the apps' TV
     // banners, so those are never stretched: up to 224 × 126, 178 × 100 with eight apps, 133 × 75 with ten
     // (HomeApps.shelfVisible; past that the shelf scrolls).
-    private static final float SHELF_PAD = 40, TILE_GAP = 48;
+    // MaTV: the dock's size is a setting (Prefs.dockSize): compact, normal (Free My TV's) or large, where the tiles
+    // take more of the glass and the gaps shrink. The bottom edge stays put, so a larger dock only grows upward.
+    private final float SHELF_PAD, TILE_GAP, L_TILE_H;
+
+    // MaTV "Affiche" (Netflix-like) presentation of the picks (Prefs.topStyle): the focused title's photo full screen
+    // with dark scrims, its name large on the left, and the picks as a row of small landscape thumbnails.
+    private final boolean billboard;
+    private Bitmap bbImage, bbPrev;
+    private String bbKey = "";
+    private long bbAt;
+    private static final long BB_FADE_MS = 650;
+    private static final float BB_TITLE_BASE = 340, BB_THUMB_TOP = 528, BB_THUMB_W = 320, BB_THUMB_H = 180, BB_THUMB_GAP = 30;
     private static final float TILE_RADIUS = 22;
     // Tile focus (Apple TV style): it grows from the center and its shadow drops (it "rises" toward the viewer).
     private static final float FOCUS_GROW = 0.2f;
@@ -120,9 +131,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private static final float L_TALL_W = 320, L_CARD_GAP = 40, L_BUTTON = 68, L_BUTTON_GAP = 20, L_BUTTON_CY = 103;
     private static final float L_STATUS = 25, L_STATUS_GAP = 22;
     private static final String[] STATUS_SYMBOLS = {"wifi", "ethernet", "bluetooth", "usb"};
-    private static final float L_PLATTER_TOP = 814, L_TILE_H = 126;
+    private static final float L_PLATTER_TOP = 814, L_TILE_BOTTOM = 940;
     private static final float L_DATE_BASE = 330, L_CLOCK_BASE = 540, L_WEATHER_BASE = 626, L_QUOTES_BASE = 694;
-    private static final int L_INK = 0xFF1D1D1F, L_DIM = 0xFF6E6E73, L_FAINT = 0xFF8E8E93;
+    private static final int L_INK = 0xFF16161A, L_DIM = 0xFF4E4E55, L_FAINT = 0xFF6C6C73;   // MaTV: darker for contrast on glass
     private static String[] tabs;
     private static int tabsGeneration = -1;
     private static final String[] TAB_KIND = {null, "movie", "tv"};
@@ -604,6 +615,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     HomeView(Activity a) {
         super(a);
+        billboard = "billboard".equals(Prefs.topStyle());
+        String dock = Prefs.dockSize();
+        SHELF_PAD = dock.equals("large") ? 26 : dock.equals("compact") ? 44 : 40;
+        TILE_GAP = dock.equals("large") ? 30 : dock.equals("compact") ? 56 : 48;
+        L_TILE_H = dock.equals("large") ? 140 : dock.equals("compact") ? 104 : 126;
         activity = a;
         data = HomeData.get(a);
         recs = Recs.get(a);
@@ -1006,7 +1022,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         boolean sheetMoving = sheet.step(dt);
         boolean toastFading = tickToast(up);
         boolean heroFading = tickHeroFade(up);
-        boolean bgFading = tickBackgroundFade(up);
+        boolean bgFading = tickBackgroundFade(up) | tickBillboard(up);
         boolean nightMoving = tickNight(up);
         boolean menuMoving = menu.step(dt) | menuPick.step(dt);
         if (menuMoving || nightMoving && menuOpen) menuLayer.invalidate();
@@ -1295,7 +1311,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     /** The plain background's colour at height y (0 = top, 1 = bottom), as drawLightSky draws it. */
     private int plainAt(float y, int card) {
-        if (!continueMode()) return blend(0xFFEBEBF0, 0xFF141416, night);
+        if (!continueMode()) return blend(blend(0xFFF3F1FA, 0xFFDCE4F2, y), 0xFF141416, night);
         return blend(tintColor(card), 0xFF000000, 0.2f * y);   // under drawTint's shade
     }
 
@@ -1451,6 +1467,75 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             }
         }
         return true;
+    }
+
+    private boolean tickBillboard(long up) {
+        if (bbAt == 0) return false;
+        if (up - bbAt >= BB_FADE_MS) {
+            bbAt = 0;
+            bbPrev = null;   // recycled by the GC: it may still be in a recorded frame
+        }
+        return true;
+    }
+
+    /** The billboard's photo for the focused pick, built off the main thread from Recs' image on disk. */
+    private void loadBillboard() {
+        if (!billboard || !picksMode() || cards.isEmpty() || w <= 0) return;
+        final Recs.Pick p = cards.get(Math.min(cardIndex, cards.size() - 1));
+        final String key = Recs.key(p);
+        if (key.equals(bbKey)) return;
+        final java.io.File f = recs.readyImage(p);
+        if (f == null) return;   // not downloaded yet: updateCards calls again when it is
+        bbKey = key;
+        final int bw = w, bh = h;
+        LOADER.execute(() -> {
+            Bitmap out = null;
+            try {
+                out = billboardImage(f, bw, bh);
+            } catch (Exception | OutOfMemoryError e) {
+                AppLog.w("billboard: " + e.getMessage());
+            }
+            final Bitmap ready = out;
+            handler.post(() -> {
+                if (ready == null || !key.equals(bbKey)) return;
+                bbPrev = bbImage;
+                bbImage = ready;
+                bbAt = SystemClock.uptimeMillis();
+                heroDirty = true;
+                sky.invalidate();
+                wake();
+            });
+        });
+    }
+
+    /** The photo covering the screen, with Netflix's scrims: dark on the left (the title) and toward the bottom. */
+    private static Bitmap billboardImage(java.io.File f, int w, int h) throws java.io.IOException {
+        android.graphics.BitmapFactory.Options b = new android.graphics.BitmapFactory.Options();
+        b.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(f.getPath(), b);
+        if (b.outWidth <= 0) throw new java.io.IOException("unreadable");
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        while (b.outWidth / (o.inSampleSize * 2) >= w && b.outHeight / (o.inSampleSize * 2) >= h) o.inSampleSize *= 2;
+        Bitmap src = android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+        if (src == null) throw new java.io.IOException("unreadable");
+        Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(out);
+        float s = Math.max((float) w / src.getWidth(), (float) h / src.getHeight());
+        float dw = src.getWidth() * s, dh = src.getHeight() * s;
+        Paint p = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+        // Anchored to the top right: faces and the action usually sit there, away from the title.
+        c.drawBitmap(src, null, new RectF(w - dw, 0, w, dh), p);
+        src.recycle();
+        Paint g = new Paint(Paint.DITHER_FLAG);
+        g.setShader(new LinearGradient(0, 0, w * 0.72f, 0, new int[] {0xF2000000, 0xB3000000, 0x40000000, 0x00000000},
+                new float[] {0, 0.35f, 0.75f, 1}, Shader.TileMode.CLAMP));
+        c.drawRect(0, 0, w, h, g);
+        g.setShader(new LinearGradient(0, h * 0.45f, 0, h, new int[] {0x00000000, 0x99000000, 0xF2000000},
+                new float[] {0, 0.55f, 1}, Shader.TileMode.CLAMP));
+        c.drawRect(0, h * 0.45f, w, h, g);
+        g.setShader(new LinearGradient(0, 0, 0, h * 0.25f, 0x8C000000, 0x00000000, Shader.TileMode.CLAMP));
+        c.drawRect(0, 0, w, h * 0.25f, g);
+        return out;
     }
 
     private boolean tickHeroFade(long up) {
@@ -1611,7 +1696,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         float tw = Math.min(L_TILE_H * 16f / 9 * k, (full - Math.max(0, n - 1) * gap) / Math.max(1, n));
         float th = tw * 9f / 16;
         float width = n * tw + Math.max(0, n - 1) * gap, left = (w - width) / 2f;
-        float top = (L_PLATTER_TOP + L_TILE_H) * k - th;
+        float top = L_TILE_BOTTOM * k - th;
         platterRect.set(left - pad, top, left + width + pad, top + th + 2 * pad);
         snap(platterRect);
         shelfFirst = Math.max(0, Math.min(shelfFirst, shelf.size() - n));
@@ -1650,7 +1735,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         shadow.setColor(tone(0x1F000000, 0x52000000));
         shadows.draw(c, tmp, radius, SHADOW_BLUR * k, shadow);
         // White glass by day; smoked glass at night.
-        scene.liquid(c, platterRect, radius, tone(glassLight(), SMOKE), tone(0.42f, 0.12f), tone(0.03f, 0.08f),
+        scene.liquid(c, platterRect, radius, tone(glassLight(), SMOKE), tone(0.56f, 0.12f), tone(0.03f, 0.08f),
                 tone(30, 34) * k, tone(22, 28) * k, tone(0.65f, 0.95f), 1);
     }
 
@@ -1997,8 +2082,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // MARK: - Bottom drawer
 
     private static List<HomeApps.Item> drawerList(Context c) {
-        List<HomeApps.Item> list = HomeApps.allInputs(c);
-        list.addAll(HomeApps.drawerShortcuts(c));
+        List<HomeApps.Item> list = Prefs.drawerInputs() ? HomeApps.allInputs(c) : new ArrayList<>();
+        for (HomeApps.Item it : HomeApps.drawerShortcuts(c)) {
+            // Without the shortcuts, Home Settings stays: it's the way back to these settings.
+            if (Prefs.drawerShortcuts() || it.kind == HomeApps.SETTINGS) list.add(it);
+        }
         list.addAll(HomeAssistant.items(c));   // empty unless configured and on in Home Settings
         return list;
     }
@@ -2140,7 +2228,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private void drawerCard(Canvas c, RectF r) {
-        drawerGlass(c, r, 30 * k, 0.72f, 0x1A000000, 10 * k);
+        drawerGlass(c, r, 30 * k, 0.9f, 0x2A000000, 12 * k);
     }
 
     private void drawDrawer(Canvas c) {
@@ -2181,7 +2269,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             shadow.setColor(Ui.alpha(0xFF000000, 0.45f * f));
             shadows.draw(c, tmp, r, SHADOW_BLUR * k, shadow);
         }
-        if (f < 0.99f) drawerGlass(c, cell, r, 0.7f, 0x14000000, 6 * k);
+        if (f < 0.99f) drawerGlass(c, cell, r, 0.88f, 0x24000000, 8 * k);
         if (f > 0.01f) {
             fill.setShader(null);
             fill.setColor(Ui.alpha(WHITE, f));
@@ -3736,6 +3824,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             if (!running || !picksMode() || cards.isEmpty()) return;
             Backdrop b = recs.backdrop(cards.get(Math.min(cardIndex, cards.size() - 1)));
             // Not built yet (updateCards shows it when it is), or already there: nothing to fade, no frame to draw
+            loadBillboard();
             if (b == null || b == bgTo) return;
             showBackdrop(b);
             wake();
@@ -3908,6 +3997,15 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     /** The cards side by side: the one at cardIndex wide, the others tall, sliding as `cardOpen` moves. */
     private void layoutCards() {
+        if (billboard) {   // a row of small landscape thumbnails under the title
+            float tw = BB_THUMB_W * k, th = BB_THUMB_H * k, g = BB_THUMB_GAP * k, x = MARGIN * k - cardScroll.value * (tw + g);
+            for (int i = 0; i < Recs.MAX_CARDS; i++) {
+                cardRects[i].set(x, BB_THUMB_TOP * k, x + tw, BB_THUMB_TOP * k + th);
+                snap(cardRects[i]);
+                x += tw + g;
+            }
+            return;
+        }
         float top = L_CARDS_TOP * k, ch = L_CARD_H * k, g = L_CARD_GAP * k, tall = L_TALL_W * k;
         float wide = (CONTENT_R - MARGIN) * k - 2 * tall - 2 * g, x = MARGIN * k - cardScroll.value * (tall + g);
         for (int i = 0; i < Recs.MAX_CARDS; i++) {
@@ -3950,6 +4048,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         Backdrop b = own ? Photos.backdrop(getContext(), ownReady)
                 : cards.isEmpty() ? null : recs.backdrop(cards.get(Math.min(cardIndex, cards.size() - 1)));
         if (b != null || (cards.isEmpty() && !own)) showBackdrop(b);
+        loadBillboard();
         heroDirty = true;
         spoken.focusMoved();    // new picks under the focused card
     }
@@ -4421,9 +4520,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         float e = bgFadeAt == 0 ? 1 : fadeEase(bgFadeAt, up);
         boolean fading = bgFadeAt != 0;
         // Drawer open: the background lightens (by day) or darkens (at night), as a filter on the drawing itself.
-        android.graphics.ColorFilter v = veil(tone(0.32f, 0.42f) * Ui.clamp(drawer.value), blend(0xFFFFFFFF, 0xFF000000, night));
+        android.graphics.ColorFilter v = veil(tone(0.16f, 0.42f) * Ui.clamp(drawer.value), blend(0xFFFFFFFF, 0xFF000000, night));
         if (bgTo == null || (fading && bgFrom == null)) {
-            if (lightGradient == null) lightGradient = Ui.gradient(h, 0xFFF5F5F7, 0xFFE2E2E7);
+            if (lightGradient == null) lightGradient = Ui.gradient(h, 0xFFF3F1FA, 0xFFDCE4F2);   // soft lavender to sky, not gray
             if (nightGradient == null) nightGradient = Ui.gradient(h, 0xFF1C1C1E, 0xFF0B0B0D);
             fill.setColorFilter(v);
             fill.setColor(0xFF000000);
@@ -4445,6 +4544,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         imagePaint.setColorFilter(v);
         if (fading && bgFrom != null) drawLightImage(c, bgFrom, bgTo == null ? 1 - e : 1);
         if (bgTo != null) drawLightImage(c, bgTo, fading ? e : 1);
+        if (billboard && picksMode() && bbImage != null) {
+            float a = bbAt == 0 ? 1 : Ui.clamp((up - bbAt) / (float) BB_FADE_MS);
+            if (bbPrev != null && a < 1) drawImage(c, bbPrev, 1);
+            drawImage(c, bbImage, a);
+        }
         imagePaint.setColorFilter(null);
     }
 
@@ -4519,6 +4623,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
             return;
         }
+        if (billboard && picksMode() && bbImage != null) {   // white text over the photo, whatever the theme
+            lTitle.setColor(WHITE);
+            lTab.setColor(0xB3FFFFFF);
+            lTabOn.setColor(WHITE);
+        }
         String hello = picksMode() ? Ui.tr("For You") : Ui.tr("Continue Watching");
         c.drawText(hello, MARGIN * k - Ui.leftBearing(lTitle, hello), L_TITLE_BASE * k, lTitle);
         titleRight = MARGIN * k + lTitle.measureText(hello);
@@ -4552,12 +4661,103 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             c.drawText(tabs()[i], r.centerX() - p.measureText(tabs()[i]) / 2, r.centerY() + Ui.halfCap(p), p);
         }
         layoutCards();
+        if (billboard) {
+            drawBillboardText(c);
+            int bt = -1;
+            for (int i = 0; i < cardSlots; i++) if (cardFocus[i].value > 0.02f && (bt < 0 || cardFocus[i].value > cardFocus[bt].value)) bt = i;
+            for (int i = 0; i < cardSlots; i++) if (i != bt) drawBillboardThumb(c, i);
+            if (bt >= 0) drawBillboardThumb(c, bt);
+            if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
+            return;
+        }
         int top = -1;
         int slots = cardSlots;   // the others aren't drawn: at 3, no card peeks in at the right edge
         for (int i = 0; i < slots; i++) if (cardFocus[i].value > 0.02f && (top < 0 || cardFocus[i].value > cardFocus[top].value)) top = i;
         for (int i = 0; i < slots; i++) if (i != top) drawLightCard(c, i);
         if (top >= 0) drawLightCard(c, top);
         if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
+    }
+
+    private Paint bbTitle, bbMeta, bbButton;
+
+    /** The focused pick's name, large, its genre · runtime · service, and the "Watch" pill (the Netflix billboard). */
+    private void drawBillboardText(Canvas c) {
+        if (cards.isEmpty()) return;
+        Recs.Pick p = cards.get(Math.min(cardIndex, cards.size() - 1));
+        if (bbTitle == null) {
+            bbTitle = Ui.text(Ui.displaySemibold, 84 * k, WHITE);
+            bbTitle.setShadowLayer(24 * k, 0, 3 * k, 0x99000000);
+            bbMeta = Ui.text(Ui.medium, 30 * k, 0xD9FFFFFF);
+            bbMeta.setShadowLayer(16 * k, 0, 2 * k, 0x99000000);
+            bbButton = Ui.text(Ui.semibold, 28 * k, INK);
+        }
+        boolean onPhoto = bbImage != null;   // before the photo is in, the theme's own colours
+        bbTitle.setColor(onPhoto ? WHITE : tone(L_INK, WHITE));
+        bbMeta.setColor(onPhoto ? 0xD9FFFFFF : tone(L_DIM, 0xD9FFFFFF));
+        float x = MARGIN * k, maxW = 1000 * k;
+        String title = p.title == null ? "" : p.title;
+        float size = 84 * k;
+        bbTitle.setTextSize(size);
+        while (bbTitle.measureText(title) > maxW && size > 54 * k) bbTitle.setTextSize(size -= 4 * k);   // long names shrink first
+        fitPaint.set(bbTitle);
+        c.drawText(TextUtils.ellipsize(title, fitPaint, maxW, TextUtils.TruncateAt.END).toString(), x - Ui.leftBearing(bbTitle, title), BB_TITLE_BASE * k, bbTitle);
+        if (p.meta != null && !p.meta.isEmpty()) {
+            fitPaint.set(bbMeta);
+            c.drawText(TextUtils.ellipsize(p.meta, fitPaint, maxW, TextUtils.TruncateAt.END).toString(), x, (BB_TITLE_BASE + 56) * k, bbMeta);
+        }
+        String label = "▶  " + (p.pkg != null ? Ui.trf("Watch on {app}", "app", Recs.serviceName(p)) : Ui.tr("Watch"));
+        float tw = bbButton.measureText(label), bh = 64 * k, top = (BB_TITLE_BASE + 86) * k;
+        boolean focused = zone == Z_CARDS;
+        cell.set(x, top, x + tw + 56 * k, top + bh);
+        fill.setShader(null);
+        fill.setColor(focused ? 0xFFFFFFFF : 0x4DFFFFFF);
+        c.drawRoundRect(cell, bh / 2, bh / 2, fill);
+        bbButton.setColor(focused ? INK : WHITE);
+        c.drawText(label, x + 28 * k, cell.centerY() + Ui.halfCap(bbButton), bbButton);
+    }
+
+    /** A pick as a small landscape thumbnail; the focused one grows and gets a white rim. */
+    private void drawBillboardThumb(Canvas c, int i) {
+        RectF base = cardRects[i];
+        if (base.right < 0 || base.left > getWidth()) return;
+        Recs.Pick p = i < cards.size() ? cards.get(i) : null;
+        float f = Ui.clamp(cardFocus[i].value), s = 1 + 0.08f * f, r = 14 * k * s;
+        float cx = base.centerX(), cy = base.centerY();
+        cell.set(cx - base.width() * s / 2, cy - base.height() * s / 2, cx + base.width() * s / 2, cy + base.height() * s / 2);
+        tmp.set(cell);
+        tmp.offset(0, (8 + 10 * f) * k);
+        shadowDeep.setColor(Ui.alpha(0xFF000000, 0.35f + 0.25f * f));
+        shadows.draw(c, tmp, r, DEEP_BLUR * k, shadowDeep);
+        Backdrop b = p == null ? null : recs.backdrop(p);
+        Recs.Poster poster = recs.poster(p);
+        if (b != null && b.wide != null) coverImage(c, b.wide, b.wideShader, cell, r, 1);
+        else if (poster != null) coverImage(c, poster.bitmap, poster.shader, cell, r, 1);
+        else {
+            fill.setShader(null);
+            fill.setColor(bbImage != null ? 0xFF2C2C2E : tone(0xFFDADADF, 0xFF2C2C2E));
+            c.drawRoundRect(cell, r, r, fill);
+        }
+        // Its name on the image (bottom left, over a short shade), like Netflix's rows.
+        if (p != null && p.title != null && (b != null && b.wide != null || poster != null)) {
+            if (bbMeta != null) {
+                int a = bbMeta.getColor();
+                bbMeta.setColor(0xF2FFFFFF);   // on the thumbnail's image
+                float ts = bbMeta.getTextSize();
+                bbMeta.setTextSize(24 * k * s);
+                fitPaint.set(bbMeta);
+                c.drawText(TextUtils.ellipsize(p.title, fitPaint, cell.width() - 32 * k, TextUtils.TruncateAt.END).toString(),
+                        cell.left + 16 * k, cell.bottom - 16 * k, bbMeta);
+                bbMeta.setTextSize(ts);
+                bbMeta.setColor(a);
+            }
+        }
+        if (f > 0.01f) {
+            rim.setShader(null);
+            rim.setColor(Ui.alpha(0xFFFFFFFF, f));
+            rim.setStrokeWidth(4 * k);
+            c.drawRoundRect(cell, r, r, rim);
+            rim.setStrokeWidth(2.5f * k);
+        }
     }
 
     private boolean picksOn() {

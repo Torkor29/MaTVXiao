@@ -125,6 +125,19 @@
             </intent-filter>
         </activity>
 
+        <!-- MaTV: Home Settings by category (the drawer's and the gear's Settings open it). -->
+        <activity
+            android:name=".MaTVSettingsActivity"
+            android:process=":home"
+            android:exported="false"
+            android:label="Réglages"
+            android:launchMode="singleTask"
+            android:taskAffinity="io.freemytv.matvsettings"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/FreeMyTV.Home" />
+
         <activity
             android:name=".QuickSettingsActivity"
             android:process=":home"

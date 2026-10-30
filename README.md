@@ -19,13 +19,14 @@ Pour la **Xiaomi TV A Pro 55"** (Google TV 14), et toute TV Android TV / Google 
 
 ## Régler sur la TV
 
-*Free My TV* → *Réglages de l'accueil* :
+**Réglages** (la roue dentée en haut à droite, ou *Réglages de l'accueil* dans le tiroir du bas), rangés par catégories, chaque option avec une explication :
 
-- **Style du verre** : Verre liquide (reflets et réfraction), Givré ou Opaque.
-- **Teinte du verre** : Légère, Normale ou Forte.
-- **Couleur d'accent** : Neutre, Bleu, Violet, Rose, Or ou Vert.
-- **Écran de veille** : *Suggestions et photos*, ou **Mode art (tableaux)**. Ce mode affiche des peintures du domaine public de l'Art Institute of Chicago et du Cleveland Museum of Art en paysage, avec le titre, l'artiste et le musée. Douze nouvelles œuvres arrivent toutes les 12 h, soixante au plus sont gardées.
-- Et tout ce que Free My TV avait déjà : dock et ordre des applis, météo, horloge, thème jour/nuit, tes photos, applis récentes…
+- **Apparence** : thème (automatique, clair, sombre), style du verre (liquide, givré, opaque), teinte, couleur d'accent, taille des applis du dock, sons.
+- **Accueil** : haut de l'écran (*Suggestions*, *Vous regardiez* ou une horloge), applis du dock et leur ordre, boutons du haut, entrées et raccourcis du tiroir, icônes d'état.
+- **Suggestions** : présentation **Affiche** (image plein écran et vignettes, façon Netflix) ou **Cartes** (façon Apple TV), nombre de titres, services, clé TMDB.
+- **Écran de veille** : **Mode art** (uniquement des tableaux, montrés en entier), durée par image, horloge, légende, aperçu. Dix-neuf tableaux du Met sont livrés avec l'appli, d'autres arrivent ensuite de Chicago et Cleveland.
+- **Widgets** : météo, ville, prévisions, lecture en cours, cours des cryptos.
+- **Système** : écran d'accueil (retour à l'ancienne TV avec *Original*), langue, télécommande, minuterie de veille, mises à jour, réglages de la TV.
 
 *Boutons de la télécommande* → **YouTube** → *TizenTube* : le bouton YouTube ouvre la version sans pub.
 
