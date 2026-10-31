@@ -140,7 +140,7 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
     private String clock = "", date = "";
     private Paint datePaint, clockPaint, weatherPaint, weatherDim, quotePaint, stalePaint;
     private Paint cornerDate, cornerQuote, cornerStale, cornerClock, labelPaint, metaPaint, hintPaint;
-    private TextPaint titlePaint;
+    private TextPaint titlePaint, artTitle;
 
     private final Runnable tick = new Runnable() {
         @Override public void run() {
@@ -279,6 +279,7 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         labelPaint = Ui.text(Ui.medium, 25 * k, 0xB8FFFFFF);
         labelPaint.setLetterSpacing(0.1f);
         titlePaint = new TextPaint(Ui.text(Ui.displayMedium, 76 * k, 0xFFFFFFFF));
+        artTitle = null;   // remade at the new size
         titlePaint.setLetterSpacing(0.005f);
         metaPaint = Ui.text(Ui.medium, 29 * k, 0xC7FFFFFF);
         hintPaint = Ui.text(Ui.regular, 24 * k, 0x99FFFFFF);
@@ -756,23 +757,21 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
     // MARK: - Photo caption (bottom left)
 
     private void recordCaption(Slide s) {
+        s.caption.setPosition(0, 0, w, h);   // before the returns below (a painting's caption returns early)
         Canvas c = s.caption.beginRecording(w, h);
         try {
             if (s.pick.photo != null && !s.pick.art) return;   // your photos have no caption
-            if (s.pick.art) {   // a painting: the museum, the title, then artist · date
-                float ax = MARGIN * k, aMeta = META_BASE * k, aTitle = aMeta - 58 * k;
+            if (s.pick.art) {   // a painting: a quiet line under it, the title, then artist · date · museum
+                if (artTitle == null) {
+                    artTitle = new TextPaint(Ui.text(Ui.displayMedium, 40 * k, 0xF2FFFFFF));
+                    artTitle.setShadowLayer(14 * k, 0, 2 * k, 0x80000000);
+                }
+                float ax = MARGIN * k, maxW = (1920 - 2 * MARGIN) * k;
                 String at = s.pick.title == null ? "" : s.pick.title;
-                StaticLayout al = StaticLayout.Builder.obtain(at, 0, at.length(), titlePaint, Math.round(TITLE_W * k))
-                        .setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                        .setIncludePad(false).build();
-                float oy = aTitle - al.getLineBaseline(al.getLineCount() - 1);
-                float top = oy + al.getLineBaseline(0) - Ui.cap(titlePaint);
-                if (s.pick.app != null) c.drawText(s.pick.app.toUpperCase(Ui.locale()), ax, top - 30 * k, labelPaint);
-                c.save();
-                c.translate(ax - Ui.leftBearing(titlePaint, at), oy);
-                al.draw(c);
-                c.restore();
-                if (s.pick.meta != null && !s.pick.meta.isEmpty()) c.drawText(s.pick.meta, ax, aMeta, metaPaint);
+                c.drawText(TextUtils.ellipsize(at, artTitle, maxW, TextUtils.TruncateAt.END).toString(), ax, 1000 * k, artTitle);
+                String by = s.pick.meta == null ? "" : s.pick.meta;
+                if (s.pick.app != null && !s.pick.app.isEmpty()) by = by.isEmpty() ? s.pick.app : by + " · " + s.pick.app;
+                if (!by.isEmpty()) c.drawText(TextUtils.ellipsize(by, new TextPaint(metaPaint), maxW, TextUtils.TruncateAt.END).toString(), ax, 1044 * k, metaPaint);
                 return;
             }
             // With the hint, the caption moves up a line: the hint takes the meta's place, 72 px from the bottom edge.

@@ -173,16 +173,21 @@ final class Backdrop {
             float cover = Math.max((float) w / art.getWidth(), (float) h / art.getHeight());
             int sw = Math.max(1, Math.round(art.getWidth() * cover / 28)), sh = Math.max(1, Math.round(art.getHeight() * cover / 28));
             Bitmap small = Bitmap.createScaledBitmap(art, sw, sh, true);
-            Paint p = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
-            c.drawBitmap(small, null, new android.graphics.RectF((w - sw * 28f) / 2, (h - sh * 28f) / 2, (w + sw * 28f) / 2, (h + sh * 28f) / 2), p);
+            // Up in two filtered steps (the tiny copy straight to full size shows its pixels as blocks).
+            Bitmap mid = Bitmap.createScaledBitmap(small, Math.max(1, sw * 7), Math.max(1, sh * 7), true);
             small.recycle();
+            Paint p = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+            c.drawBitmap(mid, null, new android.graphics.RectF((w - sw * 28f) / 2, (h - sh * 28f) / 2, (w + sw * 28f) / 2, (h + sh * 28f) / 2), p);
+            mid.recycle();
             c.drawColor(0x9E000000);
-            // The painting, as large as fits with room for the clock and the caption.
-            float fit = Math.min(w * 0.84f / art.getWidth(), h * 0.78f / art.getHeight());
-            float aw = art.getWidth() * fit, ah = art.getHeight() * fit, ax = (w - aw) / 2, ay = (h - ah) / 2 - h * 0.02f;
+            // The painting, as large as fits between the clock (top right) and the caption (a small line at the bottom).
+            float bx0 = w * 0.06f, bx1 = w * 0.94f, by0 = h * 0.29f, by1 = h * 0.85f;
+            float fit = Math.min((bx1 - bx0) / art.getWidth(), (by1 - by0) / art.getHeight());
+            float aw = art.getWidth() * fit, ah = art.getHeight() * fit;
+            float ax = (bx0 + bx1 - aw) / 2, ay = (by0 + by1 - ah) / 2;
             Paint shadow = new Paint(Paint.ANTI_ALIAS_FLAG);
             shadow.setColor(0xFF000000);
-            shadow.setShadowLayer(h * 0.03f, 0, h * 0.012f, 0xCC000000);
+            shadow.setShadowLayer(h * 0.025f, 0, h * 0.01f, 0x8C000000);
             c.drawRect(ax, ay, ax + aw, ay + ah, shadow);
             c.drawBitmap(art, null, new android.graphics.RectF(ax, ay, ax + aw, ay + ah), p);
             art.recycle();
