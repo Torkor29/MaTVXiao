@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Art mode (MaTV): public-domain paintings for the screensaver, from two museums' open APIs that need no key:
- * the Art Institute of Chicago (IIIF images, 1686 px wide) and the Cleveland Museum of Art (CC0, print size).
+ * The Met (originals) and the Cleveland Museum of Art (CC0, print size); only wide works, cut to 16:9 on the TV.
  * Only landscape paintings are kept (the screensaver fills a 16:9 screen; a portrait would lose most of itself).
  * Up to MAX paintings live in the app's cache (art/), with their caption in art.json. Every 12 hours, when the
  * screensaver starts, up to BATCH new ones come in one at a time and the oldest beyond MAX go. Nothing is fetched
@@ -31,7 +31,11 @@ import java.util.concurrent.Executors;
 final class Art {
     private Art() {}
 
-    static final int MAX = 60, BATCH = 12;
+    static final int MAX = 100, BATCH = 12;
+    /** The bundled set's version: a new one replaces what's in the cache (MaTV 2: 50 wide works cut for 16:9). */
+    private static final int SEED_VERSION = 2;
+    /** Every painting is stored cut to the screen's shape at this size (what the screensaver draws). */
+    private static final int OUT_W = 2112, OUT_H = 1188;
     private static final long EVERY = 12 * 3600_000L;
     private static final String UA = "MaTV/1.0 (TV screensaver; github.com/simbasjungles/free-my-tv fork)";
     private static final ExecutorService worker = Executors.newSingleThreadExecutor();
@@ -89,12 +93,17 @@ final class Art {
         AppLog.w("art: refresh");
         JSONObject idx = read(app);
         int have = idx.optJSONArray("items") == null ? 0 : idx.optJSONArray("items").length();
-        boolean seeded = idx.optBoolean("seeded");
+        boolean seeded = idx.optInt("seedVersion") == SEED_VERSION;
         if (seeded && have >= BATCH && System.currentTimeMillis() - idx.optLong("at") < EVERY) return;
         busy = true;
         worker.execute(() -> {
             try {
                 if (!seeded) {
+                    synchronized (Art.class) {   // an older set: start over with the new one
+                        File[] old = dir(app).listFiles();
+                        if (old != null) for (File f : old) //noinspection ResultOfMethodCallIgnored
+                            f.delete();
+                    }
                     seed(app);
                     AppLog.w("art: seeded " + picks(app).size() + " paintings");
                     if (done != null) main.post(done);
@@ -113,7 +122,7 @@ final class Art {
     private static void fetch(Context c, Runnable done) throws Exception {
         Random rnd = new Random();
         List<JSONObject> found = new ArrayList<>();
-        try { found.addAll(chicago(rnd)); } catch (Exception e) { AppLog.w("art: Chicago: " + e.getMessage()); }
+        try { found.addAll(met(rnd)); } catch (Exception e) { AppLog.w("art: Met: " + e.getMessage()); }
         try { found.addAll(cleveland(rnd)); } catch (Exception e) { AppLog.w("art: Cleveland: " + e.getMessage()); }
         java.util.Collections.shuffle(found, rnd);
         int added = 0;
@@ -121,13 +130,18 @@ final class Art {
             if (added >= BATCH || !on()) break;
             if (known(c, o.optString("key"))) continue;
             File f = new File(dir(c), "a" + Integer.toHexString(o.optString("key").hashCode()) + ".jpg");
+            File raw = new File(dir(c), "download.tmp");
             try {
-                download(o.optString("url"), f);
+                download(o.optString("url"), raw);
+                if (!cut(raw, f)) continue;   // too narrow or too small once measured
             } catch (Exception e) {
                 AppLog.w("art: image: " + e.getMessage());
                 //noinspection ResultOfMethodCallIgnored
                 f.delete();
                 continue;
+            } finally {
+                //noinspection ResultOfMethodCallIgnored
+                raw.delete();
             }
             o.put("file", f.getName());
             o.remove("url");
@@ -178,7 +192,7 @@ final class Art {
                 if (!dup && now.length() < MAX) now.put(o);
             }
             idx.put("items", now);
-            idx.put("seeded", true);
+            idx.put("seedVersion", SEED_VERSION);
             write(c, idx);
         }
     }
@@ -239,8 +253,79 @@ final class Art {
         return out;
     }
 
+    /** Wide enough that cutting it to 16:9 keeps most of the work, and sharp enough for the TV. */
     private static boolean landscape(double w, double h) {
-        return w > 0 && h > 0 && w / h >= 1.25 && w / h <= 2.4;
+        return w >= 2000 && h > 0 && w / h >= 1.45 && w / h <= 2.3;
+    }
+
+    private static final String[] MET_TERMS = {"landscape", "sea", "river", "mountains", "sunset", "lake", "coast",
+            "harbor", "valley", "view", "bay", "winter", "forest", "Venice", "clouds"};
+
+    /** The Met's Open Access: public-domain paintings of European and American painters (originals, very large). */
+    private static List<JSONObject> met(Random rnd) throws Exception {
+        String term = MET_TERMS[rnd.nextInt(MET_TERMS.length)];
+        int dep = rnd.nextBoolean() ? 11 : 1;
+        JSONArray ids = new JSONObject(text("https://collectionapi.metmuseum.org/public/collection/v1.1/search?departmentId="
+                + dep + "&hasImages=true&q=" + term + "&limit=80")).optJSONArray("objectIDs");
+        List<JSONObject> out = new ArrayList<>();
+        if (ids == null) return out;
+        List<Integer> all = new ArrayList<>();
+        for (int i = 0; i < ids.length(); i++) all.add(ids.optInt(i));
+        java.util.Collections.shuffle(all, rnd);
+        for (int i = 0; i < all.size() && out.size() < 24; i++) {
+            JSONObject a;
+            try {
+                a = new JSONObject(text("https://collectionapi.metmuseum.org/public/collection/v1/objects/" + all.get(i)));
+            } catch (Exception e) {
+                continue;
+            }
+            if (!a.optBoolean("isPublicDomain") || a.optString("primaryImage").isEmpty()) continue;
+            if (!"Paintings".equals(a.optString("classification"))) continue;
+            JSONObject o = new JSONObject();
+            o.put("key", "met:" + a.optInt("objectID"));
+            o.put("title", a.optString("title"));
+            o.put("artist", a.optString("artistDisplayName"));
+            o.put("date", a.optString("objectDate"));
+            o.put("museum", "The Metropolitan Museum of Art");
+            o.put("url", a.optString("primaryImage"));
+            out.add(o);
+        }
+        return out;
+    }
+
+    /**
+     * The downloaded original, checked (wide and large enough) and cut to the screen's shape at OUT_W × OUT_H, saved
+     * as `to`. The original goes: a museum's file can weigh 20 MB, the cut about 500 KB.
+     */
+    private static boolean cut(File original, File to) {
+        android.graphics.BitmapFactory.Options b = new android.graphics.BitmapFactory.Options();
+        b.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(original.getPath(), b);
+        if (!landscape(b.outWidth, b.outHeight)) return false;
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        while (b.outWidth / (o.inSampleSize * 2) >= OUT_W && b.outHeight / (o.inSampleSize * 2) >= OUT_H) o.inSampleSize *= 2;
+        android.graphics.Bitmap src = android.graphics.BitmapFactory.decodeFile(original.getPath(), o);
+        if (src == null) return false;
+        try {
+            float r = (float) OUT_W / OUT_H;
+            int iw = Math.round(src.getWidth() * 0.97f), ih = Math.round(src.getHeight() * 0.97f);   // past the edges' scan marks
+            int cw = Math.min(iw, Math.round(ih * r)), ch = Math.round(cw / r);
+            android.graphics.Bitmap out = android.graphics.Bitmap.createBitmap(OUT_W, OUT_H, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas c = new android.graphics.Canvas(out);
+            int left = (src.getWidth() - cw) / 2, top = (src.getHeight() - ch) / 2;
+            c.drawBitmap(src, new android.graphics.Rect(left, top, left + cw, top + ch), new android.graphics.Rect(0, 0, OUT_W, OUT_H),
+                    new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG | android.graphics.Paint.DITHER_FLAG));
+            try (OutputStream os = new FileOutputStream(to)) {
+                out.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, os);
+            }
+            out.recycle();
+            return true;
+        } catch (Exception | OutOfMemoryError e) {
+            AppLog.w("art: cut: " + e.getMessage());
+            return false;
+        } finally {
+            src.recycle();
+        }
     }
 
     private static HttpURLConnection open(String url) throws Exception {
@@ -279,7 +364,7 @@ final class Art {
             for (int n; (n = in.read(buf)) > 0; ) {
                 out.write(buf, 0, n);
                 total += n;
-                if (total > 25_000_000) throw new java.io.IOException("image too large");
+                if (total > 60_000_000) throw new java.io.IOException("image too large");
             }
         } finally {
             c.disconnect();

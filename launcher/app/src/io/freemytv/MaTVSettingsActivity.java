@@ -180,15 +180,15 @@ public class MaTVSettingsActivity extends Activity {
         action(picks, "Clé TMDB", "La clé qui donne accès aux infos des films. Déjà intégrée.", () -> openOld("row:tmdb"));
 
         Category saver = add("🖼️", "Écran de veille", "Ce qui s'affiche quand la TV reste inactive.");
-        choice(saver, "Contenu", "Mode art : uniquement des tableaux de musées, en entier. Sinon les suggestions.",
+        choice(saver, "Contenu", "Mode art : uniquement des œuvres de musées, en plein écran. Sinon les suggestions.",
                 Prefs.SAVER_MODES, new String[] {"Suggestions", "Mode art (tableaux)"}, Prefs::saverMode, Prefs::setSaverMode);
         String[] secs = new String[Prefs.SAVER_SECONDS.length];
         for (int i = 0; i < secs.length; i++) secs[i] = String.valueOf(Prefs.SAVER_SECONDS[i]);
         choice(saver, "Durée par image", "Combien de temps chaque image reste à l'écran.",
                 secs, new String[] {"15 s", "30 s", "1 min", "3 min", "10 min"},
                 () -> String.valueOf(Prefs.saverSeconds()), v -> Prefs.setSaverSeconds(Integer.parseInt(v)));
-        toggle(saver, "Horloge", "L'heure, la date et la météo en haut à droite.", Prefs::saverClock, Prefs::setSaverClock);
-        toggle(saver, "Légende", "Le titre et l'auteur de chaque image, en bas à gauche.", Prefs::saverCaption, Prefs::setSaverCaption);
+        toggle(saver, "Horloge", "L'heure, la date et la météo en haut à droite (réglé à part pour chaque contenu).", Prefs::saverClock, Prefs::setSaverClock);
+        toggle(saver, "Légende", "Le titre et l'auteur de chaque image, en bas à gauche (réglé à part pour chaque contenu).", Prefs::saverCaption, Prefs::setSaverCaption);
         toggle(saver, "Regarder depuis l'écran de veille", "OK ouvre le film ou la série affichés.", Prefs::saverWatch, Prefs::setSaverWatch);
         action(saver, "Aperçu", "Voir l'écran de veille maintenant.", () -> openOld("main:1"));
 
@@ -368,6 +368,7 @@ public class MaTVSettingsActivity extends Activity {
         int n = o.values.length;
         o.set.set(o.values[((at < 0 ? 0 : at) + dir + n) % n]);
         HomeData.get(this).settingsChanged();
+        refreshValues();   // other rows can follow (the clock and caption are set per screensaver content)
         fill(o, value, true);
     }
 

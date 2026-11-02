@@ -300,10 +300,11 @@ final class Prefs {
     static void setSaverSeconds(int v) { put("saverSeconds", v); }
 
     /** The screensaver's clock (with the date and weather) and the caption under each image. */
-    static boolean saverClock() { return sp().getBoolean("saverClock", true); }
-    static void setSaverClock(boolean on) { put("saverClock", on); }
-    static boolean saverCaption() { return sp().getBoolean("saverCaption", true); }
-    static void setSaverCaption(boolean on) { put("saverCaption", on); }
+    // In Art mode only the work shows unless they're turned on; with the picks, both show unless turned off.
+    static boolean saverClock() { return sp().getBoolean(saverMode().equals("art") ? "saverClockArt" : "saverClock", !saverMode().equals("art")); }
+    static void setSaverClock(boolean on) { put(saverMode().equals("art") ? "saverClockArt" : "saverClock", on); }
+    static boolean saverCaption() { return sp().getBoolean(saverMode().equals("art") ? "saverCaptionArt" : "saverCaption", !saverMode().equals("art")); }
+    static void setSaverCaption(boolean on) { put(saverMode().equals("art") ? "saverCaptionArt" : "saverCaption", on); }
 
     /** Wi-Fi/Ethernet, Bluetooth and USB icons at the top-left of the home screen. */
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }

@@ -352,8 +352,11 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
             Bitmap[] images = null;
             float[] light = new float[2];
             try {
-                images = Backdrop.photo(file, PW, PH, light, chosen.art);
-                images[0] = Backdrop.gpu(withScrims(images[0], chosen.photo == null || chosen.art, light[0], light[1]));
+                // A painting fills the screen (already cut to 16:9); scrims only behind what's drawn over it.
+                images = Backdrop.photo(file, PW, PH, light);
+                boolean caption = showCaption && (chosen.photo == null || chosen.art);
+                images[0] = Backdrop.gpu(chosen.art && !showClock && !caption ? images[0]
+                        : withScrims(images[0], caption, showClock, light[0], light[1]));
             } catch (Exception | OutOfMemoryError e) {
                 AppLog.w("screensaver: photo for “" + (chosen.photo != null ? chosen.photo.getName() : chosen.title) + "”: " + e.getMessage());
             }
@@ -540,10 +543,14 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
      * they move a little along with the photo, which makes no difference to the text.
      */
     private static Bitmap withScrims(Bitmap photo, boolean withCaption, float lightCaption, float lightClock) {
+        return withScrims(photo, withCaption, true, lightCaption, lightClock);
+    }
+
+    private static Bitmap withScrims(Bitmap photo, boolean withCaption, boolean withClock, float lightCaption, float lightClock) {
         int w = photo.getWidth(), h = photo.getHeight();
         Canvas c = new Canvas(photo);
         Paint p = new Paint(Paint.DITHER_FLAG);
-        float caption = withCaption ? scrimStrength(lightCaption, 0.5f) : 0, corner = scrimStrength(lightClock, 0.42f);
+        float caption = withCaption ? scrimStrength(lightCaption, 0.5f) : 0, corner = withClock ? scrimStrength(lightClock, 0.42f) : 0;
         p.setShader(new LinearGradient(0, h, 0, h * 0.42f,
                 new int[] {black(0.55f * caption), black(0.33f * caption), black(0.11f * caption), 0},
                 new float[] {0, 0.35f, 0.7f, 1}, Shader.TileMode.CLAMP));
