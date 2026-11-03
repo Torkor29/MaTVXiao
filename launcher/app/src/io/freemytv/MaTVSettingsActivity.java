@@ -153,6 +153,10 @@ public class MaTVSettingsActivity extends Activity {
                 Prefs.ACCENTS, new String[] {"Neutre", "Bleu", "Violet", "Rose", "Or", "Vert"}, Prefs::accent, Prefs::setAccent);
         choice(look, "Taille des applis", "La taille des logos dans le dock, en bas de l'accueil.",
                 Prefs.DOCK_SIZES, new String[] {"Compacte", "Normale", "Grande"}, Prefs::dockSize, Prefs::setDockSize);
+        toggle(look, "Cadre du dock", "La barre de verre derrière les applis. Sans elle, les applis sont plus grandes et plus proches.",
+                Prefs::dockFrame, Prefs::setDockFrame);
+        toggle(look, "Contour de sélection", "Un fin liseré de verre autour de l'appli choisie, et un reflet qui passe quand on change.",
+                Prefs::focusRing, Prefs::setFocusRing);
         toggle(look, "Sons de navigation", "Un petit clic à chaque déplacement.", Prefs::sounds, Prefs::setSounds);
 
         Category home = add("🏠", "Accueil", "Ce qui s'affiche, et dans quel ordre.");

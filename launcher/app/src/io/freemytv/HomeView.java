@@ -95,7 +95,18 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // (HomeApps.shelfVisible; past that the shelf scrolls).
     // MaTV: the dock's size is a setting (Prefs.dockSize): compact, normal (Free My TV's) or large, where the tiles
     // take more of the glass and the gaps shrink. The bottom edge stays put, so a larger dock only grows upward.
-    private final float SHELF_PAD, TILE_GAP, L_TILE_H;
+    private final float SHELF_PAD, L_TILE_H;
+    private float TILE_GAP;
+    /** MaTV: the glass bar behind the apps (Prefs.dockFrame) and the focused app's thin frosted ring (Prefs.focusRing). */
+    private final boolean dockFrame, focusRing;
+    /** When the focus last moved to another app: a soft light sweeps across it once (SHEEN_MS). */
+    private long sheenAt;
+    private int sheenIndex = -1;
+    private static final long SHEEN_MS = 650;
+    private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG), sheenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private LinearGradient ringShader, sheenShader;
+    private final Matrix sheenMatrix = new Matrix();
+    private float ringShaderH;
 
     // MaTV "Affiche" (Netflix-like) presentation of the picks (Prefs.topStyle): the focused title's photo full screen
     // with dark scrims, its name large on the left, and the picks as a row of small landscape thumbnails.
@@ -619,7 +630,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         String dock = Prefs.dockSize();
         SHELF_PAD = dock.equals("large") ? 26 : dock.equals("compact") ? 44 : 40;
         TILE_GAP = dock.equals("large") ? 30 : dock.equals("compact") ? 56 : 48;
-        L_TILE_H = dock.equals("large") ? 140 : dock.equals("compact") ? 104 : 126;
+        L_TILE_H = (dock.equals("large") ? 140 : dock.equals("compact") ? 104 : 126) + (Prefs.dockFrame() ? 0 : 12);
+        if (!Prefs.dockFrame()) TILE_GAP = dock.equals("large") ? 22 : dock.equals("compact") ? 34 : 28;   // no glass: bigger, closer
+        dockFrame = Prefs.dockFrame();
+        focusRing = Prefs.focusRing();
         activity = a;
         data = HomeData.get(a);
         recs = Recs.get(a);
@@ -856,7 +870,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // Sized to what they draw (the glass and its shadow; the grown tiles and their shadows): smaller layers are
         // cheaper for the GPU to composite on every frame of the drawer animation.
         measure(platter, width, Math.round(320 * kk));
-        measure(tiles, width, Math.round(270 * kk));
+        measure(tiles, width, Math.round(340 * kk));   // room above for a large focused app and its ring
         measure(drawerLayer, width, Math.round(600 * kk));
         measure(sheetLayer, width, height);
         measure(menuLayer, width, height);
@@ -876,7 +890,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         place(heroLayer, 0, 0);
         place(status, statusWide ? 0 : width - status.getMeasuredWidth(), 0);
         place(platter, 0, Math.round(750 * kk));
-        place(tiles, 0, Math.round(790 * kk));
+        place(tiles, 0, Math.round(740 * kk));
         place(drawerLayer, 0, Math.round(470 * kk));
         sheetLayer.layout(0, 0, width, height);
         menuLayer.layout(0, 0, width, height);
@@ -1039,6 +1053,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // drop frames (measured: ~50 ms of GPU per frame). The app tiles have no glass; the top buttons fade out as
         // they rise; the drawer is drawn resting in place; the glass shelf is redrawn once the drawer stops, so the
         // glass shows the background where it ended up.
+        boolean sheening = sheenAt != 0 && up - sheenAt < SHEEN_MS + 50;
+        if (sheenAt != 0 && !sheening) sheenAt = 0;
+        tilesMoving |= sheening;
         if (tilesMoving || tilesDirty) tiles.invalidate();
         if (statusMoving || statusDirty || bgFading) status.invalidate();
         if (heroMoving || heroDirty || heroFading) heroLayer.invalidate();
@@ -1728,7 +1745,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     /** Shelf layer: the glass bar and its shadow (it only changes with the background). */
     private void drawPlatter(Canvas c) {
-        if (shelf.isEmpty()) return;
+        if (shelf.isEmpty() || !dockFrame) return;
         float radius = (TILE_RADIUS + SHELF_PAD) * k;
         tmp.set(platterRect);
         tmp.offset(0, 18 * k);
@@ -2004,6 +2021,64 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         } else {
             if (it.tile != null) roundImage(c, it.tile, it.tileShader, cell, r);
         }
+        if (focusRing && fc > 0.01f) drawFocusRing(c, i, cell, r, fc);
+    }
+
+    /**
+     * MaTV: a thin frosted-glass ring a few pixels outside the focused app (brighter at the top, like light on the edge
+     * of glass) and, just after the focus arrives, a soft diagonal light that sweeps across the app once.
+     */
+    private void drawFocusRing(Canvas c, int i, RectF cell, float r, float fc) {
+        float gap = 7 * k, stroke = 3 * k;
+        tmp.set(cell.left - gap, cell.top - gap, cell.right + gap, cell.bottom + gap);
+        if (ringShader == null || ringShaderH != tmp.height()) {
+            ringShaderH = tmp.height();
+            ringShader = new LinearGradient(0, 0, 0, ringShaderH, new int[] {0xF2FFFFFF, 0x99FFFFFF, 0x59FFFFFF},
+                    new float[] {0, 0.5f, 1}, Shader.TileMode.CLAMP);
+        }
+        // Soft halo under the ring (frosted look), then the ring itself.
+        ringPaint.setShader(null);
+        ringPaint.setStyle(Paint.Style.STROKE);
+        ringPaint.setStrokeWidth(stroke * 3);
+        ringPaint.setColor(Ui.alpha(tone(0xFF8A93A6, 0xFFFFFFFF), tone(0.22f, 0.12f) * fc));
+        c.drawRoundRect(tmp, r + gap, r + gap, ringPaint);
+        c.save();
+        c.translate(0, tmp.top);
+        ringPaint.setShader(ringShader);
+        ringPaint.setStrokeWidth(stroke);
+        ringPaint.setColor(0xFFFFFFFF);
+        ringPaint.setAlpha(Math.round(255 * fc * tone(0.95f, 0.85f)));
+        tmp.offset(0, -tmp.top);
+        c.drawRoundRect(tmp, r + gap, r + gap, ringPaint);
+        c.restore();
+        ringPaint.setShader(null);
+        ringPaint.setAlpha(255);
+        // By day the white ring sits on white glass: a hairline of graphite just outside it draws its edge.
+        float day = 1 - dark();
+        if (day > 0.01f) {
+            float out = gap + stroke * 0.5f + 1.2f * k;
+            tmp.set(cell.left - out, cell.top - out, cell.right + out, cell.bottom + out);
+            ringPaint.setStrokeWidth(1.6f * k);
+            ringPaint.setColor(Ui.alpha(0xFF1C1C1E, 0.42f * fc * day));
+            c.drawRoundRect(tmp, r + out, r + out, ringPaint);
+        }
+        if (sheenAt == 0 || i != sheenIndex) return;
+        float t = Ui.clamp((SystemClock.uptimeMillis() - sheenAt) / (float) SHEEN_MS);
+        if (t >= 1) return;
+        float e = t * t * (3 - 2 * t), band = cell.width() * 0.45f;
+        float x = cell.left - band + (cell.width() + 2 * band) * e;
+        float a = (float) Math.sin(Math.PI * t) * 0.32f;
+        if (sheenShader == null) {   // made once, in a unit box: the matrix places it (nothing allocated per frame)
+            sheenShader = new LinearGradient(-0.5f, -0.25f, 0.5f, 0.25f, new int[] {0x00FFFFFF, 0xFFFFFFFF, 0x00FFFFFF},
+                    null, Shader.TileMode.CLAMP);
+        }
+        sheenMatrix.setScale(band, cell.height());
+        sheenMatrix.postTranslate(x, cell.centerY());
+        sheenShader.setLocalMatrix(sheenMatrix);
+        sheenPaint.setShader(sheenShader);
+        sheenPaint.setAlpha(Math.round(255 * a));
+        c.drawRoundRect(cell, r, r, sheenPaint);
+        sheenPaint.setShader(null);
     }
 
     /**
@@ -2463,6 +2538,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         revealShelf(snap);
         // Only the group whose focus changed is redrawn (moving along the shelf doesn't redraw the hero or capsule).
         boolean tilesChanged = aim(tileFocus, !sheetOpen && zone == Z_SHELF ? shelfIndex : -1, snap);
+        int lit = !sheetOpen && zone == Z_SHELF ? shelfIndex : -1;
+        if (lit != sheenIndex) {
+            sheenIndex = lit;
+            sheenAt = lit >= 0 && !snap && focusRing ? SystemClock.uptimeMillis() : 0;
+        }
         boolean statusChanged = aim(statusFocus, !sheetOpen && zone == Z_STATUS ? statusIndex : -1, snap);
         boolean drawerChanged = aim(drawerFocus, !sheetOpen && zone == Z_DRAWER ? drawerIndex : -1, snap);
         boolean heroChanged = heroFocus.target != (!sheetOpen && zone == Z_HERO ? 1 : 0);

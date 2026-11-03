@@ -274,6 +274,12 @@ final class Prefs {
     static boolean drawerShortcuts() { return sp().getBoolean("drawerShortcuts", true); }
     static void setDrawerShortcuts(boolean on) { put("drawerShortcuts", on); }
 
+    /** The glass bar behind the dock's apps, and the thin frosted ring (with its light sweep) on the focused app. */
+    static boolean dockFrame() { return sp().getBoolean("dockFrame", true); }
+    static void setDockFrame(boolean on) { put("dockFrame", on); }
+    static boolean focusRing() { return sp().getBoolean("focusRing", true); }
+    static void setFocusRing(boolean on) { put("focusRing", on); }
+
     /** The dock's size on the home screen: "compact", "normal" or "large". */
     static final String[] DOCK_SIZES = {"compact", "normal", "large"};
     static String dockSize() {
