@@ -1,9 +1,11 @@
-# Publishes dist/*.apk as a GitHub release when a version tag (v2.1.0…) is pushed.
+# Publishes dist/*.apk as a GitHub release whenever dist/VERSION changes on main (tag v<VERSION>).
 # The APKs are built and signed off GitHub (the signing keys never come here); the TVs download them from the release.
 name: Release
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: ["dist/**"]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -15,5 +17,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/MaTV-Home.apk dist/MaTV-Live.apk \
-            --title "MaTV ${GITHUB_REF_NAME#v}" --notes-file dist/NOTES.md
+          v="$(tr -d ' \r\n' < dist/VERSION)"
+          if gh release view "v$v" >/dev/null 2>&1; then echo "v$v already published"; exit 0; fi
+          gh release create "v$v" dist/MaTV-Home.apk dist/MaTV-Live.apk \
+            --target "$GITHUB_SHA" --title "MaTV $v" --notes-file dist/NOTES.md
