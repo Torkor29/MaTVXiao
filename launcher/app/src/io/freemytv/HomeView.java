@@ -940,11 +940,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         clockPaint = Ui.numbers(Ui.thin, 176 * k, 0xFFFFFFFF);
         clockPaint.setLetterSpacing(-0.01f);
         for (Paint p : new Paint[] {labelPaint, titlePaint, metaPaint, clockPaint}) p.setShadowLayer(22 * k, 0, 2 * k, 0x59000000);
-        lTitle = Ui.text(Ui.displaySemibold, 76 * k, L_INK);
+        lTitle = Ui.text(Ui.displayMedium, 74 * k, L_INK);   // MaTV: a lighter, Apple-like weight
         lTitle.setLetterSpacing(0.004f);
-        lTab = Ui.text(Ui.medium, 30 * k, L_DIM);
-        lTabOn = Ui.text(Ui.semibold, 30 * k, L_INK);
-        lCardTitle = Ui.text(Ui.semibold, 31 * k, L_INK);
+        lTab = Ui.text(Ui.regular, 30 * k, L_DIM);
+        lTabOn = Ui.text(Ui.medium, 30 * k, L_INK);
+        lCardTitle = Ui.text(Ui.medium, 31 * k, L_INK);
         lCardTitle.setLetterSpacing(0.012f);
         lCardMeta = Ui.text(Ui.medium, 25 * k, L_DIM);
         lQuote = Ui.numbers(Ui.regular, 21 * k, L_FAINT);
@@ -967,7 +967,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         staleQuote = Ui.text(Ui.medium, 21 * k, 0x99FFFFFF);
         staleQuote.setTextAlign(Paint.Align.RIGHT);
         rowTitle = Ui.text(Ui.semibold, 25 * k, 0xB3FFFFFF);
-        drawerLabel = Ui.text(Ui.medium, 23 * k, 0xEBFFFFFF);
+        drawerLabel = Ui.text(Ui.regular, 23 * k, 0xEBFFFFFF);
         drawerLabel.setTextAlign(Paint.Align.CENTER);
         cardTitle = Ui.text(Ui.semibold, 25 * k, 0xB3FFFFFF);
         cardText = Ui.text(Ui.medium, 29 * k, 0xF2FFFFFF);
@@ -4765,11 +4765,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (cards.isEmpty()) return;
         Recs.Pick p = cards.get(Math.min(cardIndex, cards.size() - 1));
         if (bbTitle == null) {
-            bbTitle = Ui.text(Ui.displaySemibold, 84 * k, WHITE);
+            bbTitle = Ui.text(Ui.displayMedium, 84 * k, WHITE);
             bbTitle.setShadowLayer(24 * k, 0, 3 * k, 0x99000000);
             bbMeta = Ui.text(Ui.medium, 30 * k, 0xD9FFFFFF);
             bbMeta.setShadowLayer(16 * k, 0, 2 * k, 0x99000000);
-            bbButton = Ui.text(Ui.semibold, 28 * k, INK);
+            bbButton = Ui.text(Ui.medium, 28 * k, INK);
         }
         boolean onPhoto = bbImage != null;   // before the photo is in, the theme's own colours
         bbTitle.setColor(onPhoto ? WHITE : tone(L_INK, WHITE));
