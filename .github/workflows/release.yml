@@ -1,0 +1,19 @@
+# Publishes dist/*.apk as a GitHub release when a version tag (v2.1.0…) is pushed.
+# The APKs are built and signed off GitHub (the signing keys never come here); the TVs download them from the release.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/MaTV-Home.apk dist/MaTV-Live.apk \
+            --title "MaTV ${GITHUB_REF_NAME#v}" --notes-file dist/NOTES.md

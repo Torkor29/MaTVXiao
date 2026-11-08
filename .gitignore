@@ -8,3 +8,4 @@ config.properties
 out/
 platform-tools/
 matv-etat.json
+!dist/*.apk
