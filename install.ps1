@@ -65,6 +65,17 @@ $android = (& $adb -s $target shell getprop ro.build.version.release).Trim()
 $abis = (& $adb -s $target shell getprop ro.product.cpu.abilist).Trim()
 Say "TV : $brand $model, Android $android ($abis)" "Green"
 
+# --- Ce qui est deja sur la TV (pour ne reinstaller que ce qui a change) -------------------------------------------
+$statePath = Join-Path $here "matv-etat.json"
+$state = @{}
+if (Test-Path $statePath) {
+    try { (Get-Content $statePath -Raw | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $state[$_.Name] = $_.Value } } catch { $state = @{} }
+}
+function Save-State { $state | ConvertTo-Json | Set-Content -Path $statePath -Encoding UTF8 }
+function On-Tv($pkg) { return ((& $adb -s $target shell pm path $pkg 2>$null | Out-String) -match "package:") }
+function Hash($path) { return (Get-FileHash $path -Algorithm SHA256).Hash }
+$updated = 0
+
 function Install-Apk($path, $label) {
     Say "Installation de $label..."
     Say "  (si rien ne bouge : regarde la TV, Play Protect peut demander 'Installer quand meme')" "DarkGray"
@@ -76,13 +87,22 @@ function Install-Apk($path, $label) {
 
 # --- Ecran d'accueil + IPTV --------------------------------------------------------------------------------------
 Step 3 "Ecran d'accueil MaTV"
-$launcherOk = Install-Apk (Join-Path $here "apk\MaTV-Home.apk") "MaTV (ecran d'accueil)"
-if ($launcherOk -and $brand -match "TCL") {
-    & $adb -s $target shell "appops set io.freemytv AUTO_START allow || appops set io.freemytv APP_AUTO_START allow" *> $null
+$homeApk = Join-Path $here "apk\MaTV-Home.apk"
+$h = Hash $homeApk
+if ($state["home"] -eq $h -and (On-Tv "io.freemytv")) { Say "  Deja a jour, rien a faire." "DarkGray" }
+else {
+    $launcherOk = Install-Apk $homeApk "MaTV (ecran d'accueil)"
+    if ($launcherOk) { $state["home"] = $h; Save-State; $updated++ }
+    if ($launcherOk -and $brand -match "TCL") {
+        & $adb -s $target shell "appops set io.freemytv AUTO_START allow || appops set io.freemytv APP_AUTO_START allow" *> $null
+    }
 }
 
 Step 4 "MaTV Live (IPTV)"
-Install-Apk (Join-Path $here "apk\MaTV-Live.apk") "MaTV Live" | Out-Null
+$liveApk = Join-Path $here "apk\MaTV-Live.apk"
+$h = Hash $liveApk
+if ($state["live"] -eq $h -and (On-Tv "io.matv.iptv")) { Say "  Deja a jour, rien a faire." "DarkGray" }
+elseif (Install-Apk $liveApk "MaTV Live") { $state["live"] = $h; Save-State; $updated++ }
 
 # --- TizenTube -----------------------------------------------------------------------------------------------------
 if (-not $SkipTizenTube) {
@@ -100,19 +120,37 @@ if (-not $SkipTizenTube) {
         }
         if (-not $pick) { $pick = $apks | Where-Object { $_.name -match "universal|release" } | Select-Object -First 1 }
         if (-not $pick) { $pick = $apks[0] }
+        $ttPkg = $state["ttPkg"]
+        if ($state["tt"] -eq $rel.tag_name -and $ttPkg -and (On-Tv $ttPkg)) { Say "  Deja a jour ($($rel.tag_name)), rien a faire." "DarkGray"; throw "SKIP" }
+        $before = (& $adb -s $target shell pm list packages -3 2>$null | Out-String) -split "`r?`n"
         $file = Join-Path $env:TEMP $pick.name
         Say "Telechargement de $($pick.name) ($($rel.tag_name))..."
         Invoke-WebRequest $pick.browser_download_url -OutFile $file -UseBasicParsing -ErrorAction Stop
-        Install-Apk $file "TizenTube" | Out-Null
+        if (Install-Apk $file "TizenTube") {
+            if (-not $ttPkg) {   # its package name, learned from what appeared on the TV
+                $after = (& $adb -s $target shell pm list packages -3 2>$null | Out-String) -split "`r?`n"
+                $new = @($after | Where-Object { $_ -and ($before -notcontains $_) })
+                if ($new.Count -ge 1) { $ttPkg = ($new[0] -replace "^package:", "").Trim() }
+            }
+            $state["tt"] = $rel.tag_name; if ($ttPkg) { $state["ttPkg"] = $ttPkg }; Save-State; $updated++
+        }
         Remove-Item $file -ErrorAction SilentlyContinue
     } catch {
-        Say "TizenTube n'a pas pu etre installe automatiquement : $($_.Exception.Message)" "Yellow"
-        Say "Telecharge l'APK sur https://github.com/reisxd/TizenTubeCobalt/releases puis : adb install -r <fichier>.apk" "Yellow"
+        if ($_.Exception.Message -ne "SKIP") {
+            Say "TizenTube n'a pas pu etre installe automatiquement : $($_.Exception.Message)" "Yellow"
+            Say "Telecharge l'APK sur https://github.com/reisxd/TizenTubeCobalt/releases puis : adb install -r <fichier>.apk" "Yellow"
+        }
     }
 }
 
 # --- Fin -------------------------------------------------------------------------------------------------------------
 & $adb disconnect $target *> $null   # avant le basculement : la TV doit poser sa question a MaTV, pas a l'ordinateur
+if ($state["done"]) {   # a later run: only updates
+    Say ""
+    if ($updated -eq 0) { Say "Tout etait deja a jour." "Green" } else { Say "Mise a jour terminee ($updated appli(s)). Tes reglages sont conserves." "Green" }
+    exit 0
+}
+$state["done"] = $true; Save-State
 Step 6 "Derniere etape, sur la TV"
 Say "1. Ouvre l'appli 'Free My TV' > Ecran d'accueil > Free My TV."
 Say "   La TV redemande 'Autoriser le debogage USB ?' : coche 'Toujours autoriser' et accepte."
