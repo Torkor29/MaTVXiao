@@ -43,14 +43,14 @@ import java.security.MessageDigest;
 final class Updates {
     private Updates() {}
 
-    private static final String LATEST = "https://api.github.com/repos/simbasjungles/free-my-tv/releases/latest";
+    private static final String LATEST = "https://api.github.com/repos/Torkor29/MaTVXiao/releases/latest";
     // The only place the APK may come from: this repository's releases (github.com redirects to its download host).
-    private static final String RELEASES = "https://github.com/simbasjungles/free-my-tv/releases/download/";
+    private static final String RELEASES = "https://github.com/Torkor29/MaTVXiao/releases/download/";
     // The release key's certificate, as `apksigner verify --print-certs` shows it: only APKs signed with it come in.
-    private static final String RELEASE_CERT = "b85d4ff69cb42bfb1837ee0279506363954470b16402a4165f2f095886d19204";
-    private static final String ASSET = "FreeMyTV.apk";
-    private static final long MAX_SIZE = 30L << 20;   // the APK is about 1.5 MB
-    private static final long WEEK = 7 * 24 * 3600_000L;
+    private static final String RELEASE_CERT = "517bb5aee53452b043aa056467fc9d6e11c631c363b9452f5199535eff61f57e";   // MaTV's key
+    private static final String ASSET = "MaTV-Home.apk";
+    private static final long MAX_SIZE = 80L << 20;   // MaTV's APK is about 26 MB (the bundled paintings)
+    private static final long WEEK = 24 * 3600_000L;   // MaTV: checked every day (the name stays)
     static final int JOB = 2900;
     static final String ACTION = "io.freemytv.UPDATE_STATUS";
 

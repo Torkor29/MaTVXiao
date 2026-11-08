@@ -86,8 +86,23 @@ function Install-Apk($path, $label) {
 }
 
 # --- Ecran d'accueil + IPTV --------------------------------------------------------------------------------------
+# Les applis viennent de la derniere version publiee sur GitHub ; sinon du dossier apk a cote de ce script.
+$matvRel = $null
+try { $matvRel = Invoke-RestMethod "https://api.github.com/repos/Torkor29/MaTVXiao/releases/latest" -Headers @{ "User-Agent" = "MaTV-installer" } -ErrorAction Stop } catch { }
+function Get-MaTVApk($name) {
+    if ($matvRel) {
+        $asset = @($matvRel.assets | Where-Object { $_.name -eq $name }) | Select-Object -First 1
+        if ($asset) {
+            $file = Join-Path $env:TEMP $name
+            Say "Telechargement de $name ($($matvRel.tag_name))..."
+            try { Invoke-WebRequest $asset.browser_download_url -OutFile $file -UseBasicParsing -ErrorAction Stop; return $file } catch { }
+        }
+    }
+    return (Join-Path $here "apk\$name")
+}
+
 Step 3 "Ecran d'accueil MaTV"
-$homeApk = Join-Path $here "apk\MaTV-Home.apk"
+$homeApk = Get-MaTVApk "MaTV-Home.apk"
 $h = Hash $homeApk
 if ($state["home"] -eq $h -and (On-Tv "io.freemytv")) { Say "  Deja a jour, rien a faire." "DarkGray" }
 else {
@@ -99,7 +114,7 @@ else {
 }
 
 Step 4 "MaTV Live (IPTV)"
-$liveApk = Join-Path $here "apk\MaTV-Live.apk"
+$liveApk = Get-MaTVApk "MaTV-Live.apk"
 $h = Hash $liveApk
 if ($state["live"] -eq $h -and (On-Tv "io.matv.iptv")) { Say "  Deja a jour, rien a faire." "DarkGray" }
 elseif (Install-Apk $liveApk "MaTV Live") { $state["live"] = $h; Save-State; $updated++ }
@@ -148,6 +163,7 @@ if (-not $SkipTizenTube) {
 if ($state["done"]) {   # a later run: only updates
     Say ""
     if ($updated -eq 0) { Say "Tout etait deja a jour." "Green" } else { Say "Mise a jour terminee ($updated appli(s)). Tes reglages sont conserves." "Green" }
+    Say "Rappel : si les suggestions ont disparu, Reglages > Suggestions > Cle TMDB (QR code)." "DarkGray"
     exit 0
 }
 $state["done"] = $true; Save-State
@@ -155,9 +171,10 @@ Step 6 "Derniere etape, sur la TV"
 Say "1. Ouvre l'appli 'Free My TV' > Ecran d'accueil > Free My TV."
 Say "   La TV redemande 'Autoriser le debogage USB ?' : coche 'Toujours autoriser' et accepte."
 Say "   Si elle demande d'oublier le Wi-Fi puis de le reconnecter : fais-le, puis recommence."
-Say "2. Free My TV > Reglages de l'accueil :"
-Say "   Style du verre, Teinte du verre, Couleur d'accent, Ecran de veille > Mode art (tableaux)."
-Say "3. Boutons de la telecommande > YouTube > TizenTube : le bouton YouTube ouvre la version sans pub."
+Say "2. Reglages (roue dentee en haut a droite) : Apparence, Ecran de veille > Mode art..."
+Say "3. Reglages > Systeme > Telecommande > YouTube > TizenTube : le bouton YouTube ouvre la version sans pub."
 Say "4. Ouvre 'MaTV Live' et entre tes codes Xtream."
+Say "5. Pour les suggestions : Reglages > Suggestions > Cle TMDB, scanne le QR code avec ton telephone."
 Say ""
+Say "Ensuite, plus besoin de l'ordinateur : la TV propose les mises a jour toute seule." "Green"
 Say "Pour tout remettre comme avant : Free My TV > Ecran d'accueil > Original." "Green"

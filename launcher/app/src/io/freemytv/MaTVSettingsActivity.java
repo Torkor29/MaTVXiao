@@ -192,7 +192,7 @@ public class MaTVSettingsActivity extends Activity {
                 () -> String.valueOf(Prefs.cards()), v -> Prefs.setCards(Integer.parseInt(v)));
         action(picks, "Services", "Netflix, Prime Video, Disney+…", () -> openOld("row:picks"));
         action(picks, "Vous regardiez", "Les applis qui remontent ce que tu as commencé.", () -> openOld("row:watch"));
-        action(picks, "Clé TMDB", "Donne accès aux infos des films. Déjà en place.", () -> openOld("row:tmdb"));
+        action(picks, "Clé TMDB", "Pour les suggestions. Un QR code s'affiche : scanne-le et colle ta clé sur ton téléphone.", () -> openOld("row:tmdb"));
 
         Category saver = add("cat_saver", "Écran de veille", "Quand la TV reste inactive.");
         choice(saver, "Contenu", "Mode art : des œuvres de musées, seules, en plein écran.",

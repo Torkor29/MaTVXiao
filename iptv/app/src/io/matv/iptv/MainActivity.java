@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
         root.setBackground(bg);
         setContentView(root);
         if (x.signedIn()) showBrowser(); else showLogin(null);
+        Updater.check(this, false);   // once a day: a newer MaTV Live from GitHub is offered
     }
 
     // MARK: - Sign-in
@@ -469,7 +470,9 @@ public class MainActivity extends Activity {
         });
         Button out = button("Se déconnecter");
         out.setOnClickListener(v -> { x.signOut(); showLogin(null); });
-        for (Button b : new Button[] {refresh, player, out}) {
+        Button upd = button("Rechercher une mise à jour");
+        upd.setOnClickListener(v -> Updater.check(this, true));
+        for (Button b : new Button[] {refresh, player, upd, out}) {
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(this, 420), Ui.dp(this, 54));
             lp.topMargin = Ui.dp(this, 14);
             accountPane.addView(b, lp);

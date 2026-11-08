@@ -1,11 +1,10 @@
-# Secrets: never in git (TMDB key, signing keys) and APKs built with them
+# Secrets: never in git
 config.properties
 *.keystore
 *.jks
-apk/MaTV-Home.apk
-# Build outputs
+# Built apps: they're published as release assets
+*.apk
+*.idsig
 out/
-*.apk.idsig
-launcher/FreeMyTV.apk
-iptv/MaTVLive.apk
 platform-tools/
+matv-etat.json

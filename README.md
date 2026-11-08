@@ -55,3 +55,20 @@ Au premier lancement, entre le serveur (`http://exemple.com:8080`), l'utilisateu
 ## Recompiler
 
 Les sources sont dans `launcher/` et `iptv/`, en Java pur, sans Gradle. Il faut un JDK 17 et le SDK Android (build-tools 35, android-34). Lance `./build.sh --generic` dans `launcher/` et `./build.sh` dans `iptv/`, depuis Git Bash. Garde les fichiers `*.keystore` : une mise à jour doit être signée avec la même clé. Les vérifications de Free My TV passent (`launcher/tools/check.sh`).
+
+## Mises à jour
+
+La TV vérifie chaque jour la dernière version publiée sur ce dépôt (onglet *Releases*) :
+
+- **MaTV** l'annonce à l'écran ; *Réglages* → *Système* → *Mises à jour* l'installe.
+- **MaTV Live** la propose à son ouverture (*Compte* → *Rechercher une mise à jour* pour vérifier tout de suite). La première fois, Android demande d'autoriser MaTV Live à installer ses mises à jour.
+
+Avant chaque installation, la TV vérifie que le fichier vient bien de ce dépôt, qu'il n'a pas été modifié (empreinte SHA-256) et qu'il est **signé avec la clé de MaTV**. Une version signée avec une autre clé est refusée.
+
+Les clés de signature (`launcher/freemytv.keystore` et `iptv/matvlive.keystore`) ne sont **jamais** sur GitHub. Garde-en une copie : sans elles, une nouvelle version ne pourra pas s'installer par-dessus l'ancienne.
+
+`install.bat` reste utile pour une première installation ou une nouvelle TV : il télécharge la dernière version publiée et ne réinstalle que ce qui a changé.
+
+## Clé TMDB
+
+Les versions publiées ne contiennent aucune clé. Pour les suggestions, crée une clé gratuite sur themoviedb.org (*Paramètres* → *API*), puis sur la TV : *Réglages* → *Suggestions* → *Clé TMDB*. Scanne le QR code avec ton téléphone et colle la clé : elle reste sur la TV.
