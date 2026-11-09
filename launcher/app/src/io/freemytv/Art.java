@@ -33,7 +33,7 @@ final class Art {
 
     static final int MAX = 100, BATCH = 12;
     /** The bundled set's version: a new one replaces what's in the cache (MaTV 2: 50 wide works cut for 16:9). */
-    private static final int SEED_VERSION = 2;
+    private static final int SEED_VERSION = 3;
     /** Every painting is stored cut to the screen's shape at this size (what the screensaver draws). */
     private static final int OUT_W = 2112, OUT_H = 1188;
     private static final long EVERY = 12 * 3600_000L;
@@ -70,6 +70,8 @@ final class Art {
             p.id = o.optString("key").hashCode();
             p.photo = f;
             p.art = true;
+            String cat = o.optString("category", "art"), want = Prefs.saverCategory();
+            if (!want.equals("all") && !want.equals(cat)) continue;
             p.title = o.optString("title");
             p.meta = join(o.optString("artist"), o.optString("date"));
             p.app = o.optString("museum");
@@ -110,7 +112,7 @@ final class Art {
                 }
                 if (read(app).optJSONArray("items") != null && System.currentTimeMillis() - read(app).optLong("at") < EVERY
                         && read(app).optJSONArray("items").length() >= BATCH) return;
-                fetch(app, done);
+                // MaTV: only the person's own wallpapers now (no museum downloads).
             } catch (Throwable e) {   // never crash the screensaver's process over a museum's answer
                 AppLog.w("art: " + e.getMessage());
             } finally {

@@ -296,6 +296,14 @@ final class Prefs {
     }
     static void setSaverMode(String v) { put("saverMode", v); }
 
+    /** Which wallpapers the screensaver shows: "art", "landscape" or "all". */
+    static final String[] SAVER_CATEGORIES = {"all", "art", "landscape"};
+    static String saverCategory() {
+        String v = sp().getString("saverCategory", "all");
+        return java.util.Arrays.asList(SAVER_CATEGORIES).contains(v) ? v : "all";
+    }
+    static void setSaverCategory(String v) { put("saverCategory", v); }
+
     /** Seconds each image stays on the screensaver. */
     static final int[] SAVER_SECONDS = {15, 30, 60, 180, 600};
     static int saverSeconds() {

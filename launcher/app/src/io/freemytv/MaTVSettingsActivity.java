@@ -195,8 +195,10 @@ public class MaTVSettingsActivity extends Activity {
         action(picks, "Clé TMDB", "Pour les suggestions. Un QR code s'affiche : scanne-le et colle ta clé sur ton téléphone.", () -> openOld("row:tmdb"));
 
         Category saver = add("cat_saver", "Écran de veille", "Quand la TV reste inactive.");
-        choice(saver, "Contenu", "Mode art : des œuvres de musées, seules, en plein écran.",
-                Prefs.SAVER_MODES, new String[] {"Suggestions", "Mode art"}, Prefs::saverMode, Prefs::setSaverMode);
+        choice(saver, "Contenu", "Fonds d'écran : tes images, seules, en plein écran.",
+                Prefs.SAVER_MODES, new String[] {"Suggestions", "Fonds d'écran"}, Prefs::saverMode, Prefs::setSaverMode);
+        choice(saver, "Fonds d'écran", "Tes fonds : art, paysages, ou tout mélangé.",
+                Prefs.SAVER_CATEGORIES, new String[] {"Tout", "Art", "Paysages"}, Prefs::saverCategory, Prefs::setSaverCategory);
         String[] secs = new String[Prefs.SAVER_SECONDS.length];
         for (int i = 0; i < secs.length; i++) secs[i] = String.valueOf(Prefs.SAVER_SECONDS[i]);
         choice(saver, "Durée", "Le temps de chaque image.",

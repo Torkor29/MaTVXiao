@@ -1,3 +1,1 @@
-Réglages façon Apple TV, mode art plein écran, dock avec contour de sélection, mises à jour automatiques.
-
-La clé TMDB se saisit sur la TV : Réglages > Suggestions > Clé TMDB (QR code).
+Écran de veille : tes propres fonds d'écran (catégorie Art), choix Tout / Art / Paysages.
