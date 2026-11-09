@@ -1,1 +1,1 @@
-Écran de veille : 12 paysages (catégorie Paysages), choix Tout / Art / Paysages.
+Mises à jour directement dans le nouveau menu. Fonds d'écran : Art et Paysages.

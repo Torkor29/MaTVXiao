@@ -41,6 +41,7 @@ public class MaTVSettingsActivity extends Activity {
         Setter set;
         Runnable action;
         boolean isSwitch;
+        java.util.function.Supplier<String> live;
 
         Opt(String title, String desc) { this.title = title; this.desc = desc; }
     }
@@ -226,7 +227,8 @@ public class MaTVSettingsActivity extends Activity {
                 Prefs::clockFormat, Prefs::setClockFormat);
         action(sys, "Télécommande", "Ce qu'ouvrent les boutons YouTube, Netflix…", () -> openOld("main:5"));
         action(sys, "Minuterie de veille", "Éteindre la TV après un délai.", () -> openOld("main:6"));
-        action(sys, "Mises à jour", "", () -> openOld("row:updates"));
+        action(sys, "Mises à jour", "OK cherche une nouvelle version, puis l'installe.", this::updateNow);
+        sys.opts.get(sys.opts.size() - 1).live = this::updateLabel;
         action(sys, "Réglages de la TV", "Image, son, réseau, comptes.", () -> {
             try { startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)); } catch (RuntimeException ignored) {
                 startActivity(new Intent().setClassName("com.android.tv.settings", "com.android.tv.settings.MainSettings"));
@@ -260,6 +262,36 @@ public class MaTVSettingsActivity extends Activity {
         Opt o = new Opt(title, desc);
         o.action = r;
         cat.opts.add(o);
+    }
+
+    private long checkAskedAt, installAskedAt;
+
+    private String updateLabel() {
+        org.json.JSONObject o = Updates.state(this);
+        if (System.currentTimeMillis() - checkAskedAt < 10_000 && o.optLong("at") < checkAskedAt) return Ui.tr("Checking…");
+        return Updates.summary(o, Updates.installedVersion(this));
+    }
+
+    private void updateNow() {
+        org.json.JSONObject o = Updates.state(this);
+        long now = System.currentTimeMillis();
+        if (Updates.ready(o, Updates.installedVersion(this))) {
+            if (now - installAskedAt < 5000) return;
+            installAskedAt = now;
+            ModeJob.schedule(this, ModeJob.INSTALL, "", 0);
+        } else {
+            if (Updates.busy(o) || now - checkAskedAt < 10_000) return;
+            checkAskedAt = now;
+            ModeJob.schedule(this, ModeJob.UPDATE, "", 0);
+        }
+        pollUpdates();
+    }
+
+    private final Runnable updatePoll = this::pollUpdates;
+    private void pollUpdates() {
+        refreshValues();
+        handler.removeCallbacks(updatePoll);
+        if (!isFinishing() && System.currentTimeMillis() - checkAskedAt < 120_000) handler.postDelayed(updatePoll, 700);
     }
 
     private void openOld(String where) {
@@ -480,6 +512,9 @@ public class MaTVSettingsActivity extends Activity {
                 int at = java.util.Arrays.asList(opt.values).indexOf(opt.get.get());
                 String label = opt.labels[Math.max(0, at)];
                 value.setText(focused ? "‹   " + label + "   ›" : label);
+                value.setVisibility(VISIBLE);
+            } else if (opt != null && opt.live != null) {
+                value.setText(opt.live.get());
                 value.setVisibility(VISIBLE);
             } else {
                 value.setVisibility(GONE);
