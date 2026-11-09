@@ -1,1 +1,1 @@
-Mises à jour directement dans le nouveau menu. Fonds d'écran : Art et Paysages.
+Nouveau menu complet : plus aucun écran de l'ancien menu (dock, boutons, services, clé TMDB avec QR, ville, télécommande, minuterie, accueil, langue). Suggestions : un état explique pourquoi elles n'arrivent pas.

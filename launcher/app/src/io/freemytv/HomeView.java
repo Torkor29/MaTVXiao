@@ -4741,6 +4741,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             c.drawText(tabs()[i], r.centerX() - p.measureText(tabs()[i]) / 2, r.centerY() + Ui.halfCap(p), p);
         }
         layoutCards();
+        if (cards.isEmpty()) {   // picks on but none yet: say why instead of an empty top
+            String why = picksWhy();
+            c.drawText(why, MARGIN * k - Ui.leftBearing(lTab, why), (L_TITLE_BASE + 120) * k, lTab);
+            if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
+            return;
+        }
         if (billboard) {
             drawBillboardText(c);
             int bt = -1;
@@ -4838,6 +4844,15 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             c.drawRoundRect(cell, r, r, rim);
             rim.setStrokeWidth(2.5f * k);
         }
+    }
+
+    /** Why the picks row is empty, in a few words (Réglages > Suggestions > État says more). */
+    private String picksWhy() {
+        String e = recs.error();
+        if (e == null || e.isEmpty()) return "Chargement des suggestions…";
+        if (e.contains("rejected")) return "TMDB refuse la clé : Réglages › Suggestions › Clé TMDB.";
+        if (e.equals(Recs.NO_KNOWN_APPS) || e.equals(Recs.NO_APPS)) return "Aucun service pour les suggestions : Réglages › Suggestions › Services.";
+        return "Suggestions indisponibles pour l'instant (" + e + "). Nouvel essai dans quelques minutes.";
     }
 
     private boolean picksOn() {
