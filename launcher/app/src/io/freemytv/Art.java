@@ -33,7 +33,7 @@ final class Art {
 
     static final int MAX = 100, BATCH = 12;
     /** The bundled set's version: a new one replaces what's in the cache (MaTV 2: 50 wide works cut for 16:9). */
-    private static final int SEED_VERSION = 3;
+    private static final int SEED_VERSION = 4;
     /** Every painting is stored cut to the screen's shape at this size (what the screensaver draws). */
     private static final int OUT_W = 2112, OUT_H = 1188;
     private static final long EVERY = 12 * 3600_000L;

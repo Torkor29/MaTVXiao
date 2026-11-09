@@ -1,1 +1,1 @@
-Écran de veille : tes propres fonds d'écran (catégorie Art), choix Tout / Art / Paysages.
+Écran de veille : 12 paysages ajoutés (catégorie Paysages).
