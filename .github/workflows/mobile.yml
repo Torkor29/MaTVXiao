@@ -2,6 +2,7 @@
 # (Actions > Mobile apps > Run workflow, "upload"), sends the iPhone app to TestFlight. The secrets it uses are listed
 # in mobile/STORE.md; without them it still builds and tests everything.
 name: Mobile apps
+# The macOS job can wait several minutes for a Mac.
 on:
   push:
     branches: [main]
