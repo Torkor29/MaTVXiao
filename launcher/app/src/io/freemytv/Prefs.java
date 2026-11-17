@@ -298,6 +298,13 @@ final class Prefs {
 
     /** Which wallpapers the screensaver shows: "art", "landscape" or "all". */
     static final String[] SAVER_CATEGORIES = {"all", "art", "landscape"};
+    /** The picks' mood: "all", or one of Recs.MOODS' ids (TMDB genres for movies and for shows). */
+    static String picksMood() {
+        String v = sp().getString("picksMood", "all");
+        return v == null || v.isEmpty() ? "all" : v;
+    }
+    static void setPicksMood(String v) { put("picksMood", v); }
+
     /** MaTV Connect: the phone's web app (Companion). */
     static boolean connect() { return sp().getBoolean("connect", true); }
     static void setConnect(boolean on) { put("connect", on); }

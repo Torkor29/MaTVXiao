@@ -23,7 +23,7 @@ Pour la **Xiaomi TV A Pro 55"** (Google TV 14), et toute TV Android TV / Google 
 
 - **Apparence** : thème (automatique, clair, sombre), style du verre (liquide, givré, opaque), teinte, couleur d'accent, taille des applis du dock, sons.
 - **Accueil** : haut de l'écran (*Suggestions*, *Vous regardiez* ou une horloge), applis du dock et leur ordre, boutons du haut, entrées et raccourcis du tiroir, icônes d'état.
-- **Suggestions** : présentation **Affiche** (image plein écran et vignettes, façon Netflix) ou **Cartes** (façon Apple TV), nombre de titres, services, clé TMDB.
+- **Suggestions** : **humeur** (Rire, Action, Frissons, Enquête, Émotion, Évasion, En famille, Découvrir, ou Tout), présentation **Affiche** (image plein écran et vignettes, façon Netflix) ou **Cartes** (façon Apple TV), nombre de titres, services, clé TMDB.
 - **Écran de veille** : **Fonds d'écran** (tes images, en plein écran) ou suggestions, la collection qui défile, durée par image, horloge, légende, aperçu. Les fonds se gèrent depuis le téléphone (MaTV Connect).
 - **Widgets** : météo, ville, prévisions, lecture en cours, cours des cryptos.
 - **Téléphone** : le QR code de MaTV Connect.

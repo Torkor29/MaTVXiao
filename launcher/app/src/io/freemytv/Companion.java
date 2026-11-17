@@ -355,6 +355,10 @@ final class Companion {
                 .put("clock", Prefs.saverClock())
                 .put("caption", Prefs.saverCaption()));
         o.put("library", new JSONObject().put("count", Art.count(app)).put("max", Art.MAX));
+        JSONArray moods = new JSONArray();
+        for (String[] m : Recs.MOODS) moods.put(new JSONObject().put("id", m[0]).put("name", m[1]));
+        o.put("picks", new JSONObject().put("mood", Recs.mood()[0]).put("moods", moods).put("style", Prefs.topStyle())
+                .put("on", Recs.hasKey(app)));
         return o;
     }
 
@@ -440,6 +444,12 @@ final class Companion {
         if (b.has("seconds")) Prefs.setSaverSeconds(b.optInt("seconds", 60));
         if (b.has("clock")) Prefs.setSaverClock(b.optBoolean("clock"));
         if (b.has("caption")) Prefs.setSaverCaption(b.optBoolean("caption"));
+        if (b.has("mood")) {
+            String v = b.optString("mood");
+            for (String[] m : Recs.MOODS) if (m[0].equals(v)) Prefs.setPicksMood(v);
+            main.post(() -> { try { Recs.get(app).refreshIfStale(); } catch (RuntimeException ignored) {} });
+        }
+        if (b.has("style")) { String v = b.optString("style"); if (v.equals("billboard") || v.equals("cards")) Prefs.setTopStyle(v); }
         changed();
     }
 

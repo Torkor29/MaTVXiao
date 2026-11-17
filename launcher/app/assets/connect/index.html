@@ -125,6 +125,7 @@ button.row{width:100%;text-align:left;color:inherit}
 .chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;margin:0 -18px;padding-left:18px;padding-right:18px}
 .chips::-webkit-scrollbar{display:none}
 @media (min-width:980px){.chips{margin:0;padding-left:2px;flex-wrap:wrap}}
+.group .chips{flex-wrap:wrap;margin:0;padding:2px 0 4px}
 .chip{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);font-size:14px;font-weight:560;color:var(--ink2);white-space:nowrap;transition:background .2s,color .2s}
 .chip[aria-pressed="true"]{background:var(--ink);color:#111;border-color:transparent}
 .chip em{font-style:normal;opacity:.6;font-weight:500}
@@ -242,7 +243,7 @@ button.row{width:100%;text-align:left;color:inherit}
 .pair ol li{margin:8px 0}
 .pair ol b{color:var(--ink)}
 
-.toast{position:fixed;z-index:60;left:50%;top:calc(14px + var(--safe-t));transform:translate(-50%,-140%);padding:12px 18px;border-radius:16px;background:rgba(30,32,42,.86);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--edge);font-size:15px;font-weight:550;box-shadow:0 18px 40px rgba(0,0,0,.4);transition:transform .45s var(--spring),visibility 0s linear .45s;max-width:min(92vw,520px);display:flex;gap:10px;align-items:center}
+.toast{position:fixed;z-index:60;left:50%;top:calc(14px + var(--safe-t));transform:translate(-50%,-140%);padding:12px 18px;border-radius:16px;background:rgba(30,32,42,.86);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--edge);font-size:15px;font-weight:550;box-shadow:0 18px 40px rgba(0,0,0,.4);transition:transform .45s var(--spring),visibility 0s linear .45s;width:max-content;max-width:min(92vw,520px);display:flex;gap:10px;align-items:center}
 .toast{visibility:hidden}
 .toast.on{transform:translate(-50%,0);visibility:visible;transition:transform .45s var(--spring),visibility 0s}
 .toast.bad{color:var(--warn)}
@@ -450,6 +451,15 @@ function viewTv() {
   <div class="actions">
     <button class="btn primary" data-act="show">${I.play}Lancer sur la TV</button>
   </div>
+
+  ${s.picks ? `<h2>Suggestions</h2>
+  <div class="group">
+    <div class="row stack"><div class="label"><b>Humeur</b><span>Le genre des films et séries proposés sur l'accueil</span></div>
+      <div class="chips moods" style="margin-top:8px">${s.picks.moods.map(m => `<button class="chip" data-set="mood" data-v="${esc(m.id)}" aria-pressed="${s.picks.mood === m.id}">${esc(m.name)}</button>`).join("")}</div></div>
+    <div class="row"><div class="label"><b>Présentation</b><span>Affiche : une grande image. Cartes : une rangée d'affiches.</span></div>
+      <div class="seg" role="group">${[["billboard", "Affiche"], ["cards", "Cartes"]].map(([v, l]) => `<button data-set="style" data-v="${v}" aria-pressed="${s.picks.style === v}">${l}</button>`).join("")}</div></div>
+    ${s.picks.on ? "" : `<div class="row"><div class="label"><span>Les suggestions ont besoin d'une clé TMDB : sur la TV, Réglages › Suggestions › Clé TMDB.</span></div></div>`}
+  </div>` : ""}
 
   <h2>Écran de veille</h2>
   <div class="group">
@@ -897,7 +907,10 @@ async function setSaver(name, v, el) {
   else if (name === "seconds") change.seconds = +v;
   else change[name] = v;
   if (name === "collection" && S.state.saver.mode !== "art") change.mode = "art";
-  try { S.state = await api("/api/settings", {json: change}); render(); } catch (x) { toast(x.message, true); }
+  try {
+    S.state = await api("/api/settings", {json: change}); render();
+    if (name === "mood") toast("Nouvelles suggestions en route sur la TV");
+  } catch (x) { toast(x.message, true); }
 }
 
 window.addEventListener("hashchange", () => { const v = location.hash.replace("#", ""); if (S.lib && v && v !== S.view && TABS.some(t => t[0] === v)) go(v); });

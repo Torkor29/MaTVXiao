@@ -14,7 +14,8 @@ items[0]["title"] = "Les Nymphéas"; items[0]["credit"] = "Claude Monet"
 lib = {"collections": [{"id": "art", "name": "Art"}, {"id": "landscape", "name": "Paysages"}], "items": items}
 state = {"tv": {"app": "MaTV", "model": "MiTV-MOOR2", "brand": "Xiaomi", "version": "2.5.0", "android": "11"},
          "saver": {"mode": "art", "collection": "landscape", "seconds": 60, "clock": True, "caption": False},
-         "library": {"count": len(items), "max": 200}}
+         "library": {"count": len(items), "max": 200},
+         "picks": {"mood": "all", "style": "billboard", "on": True, "moods": [{"id": a, "name": b} for a, b in [("all", "Tout"), ("laugh", "Rire"), ("action", "Action"), ("thrill", "Frissons"), ("mystery", "Enquête"), ("feel", "Émotion"), ("escape", "Évasion"), ("family", "En famille"), ("learn", "Découvrir")]]}}
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def send(self, code, body, ctype="application/json"):
@@ -44,6 +45,8 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/settings":
             for k in ("mode", "collection", "seconds", "clock", "caption"):
                 if k in b: state["saver"][k] = b[k]
+            for k in ("mood", "style"):
+                if k in b: state["picks"][k] = b[k]
             return self.send(200, state)
         if p == "/api/add":
             time.sleep(1.2); it = dict(items[random.randrange(len(items))]); it.update(id="x%d" % random.randrange(10**6), remote=b.get("remote"), title=b.get("title"), collection=b.get("collection"))

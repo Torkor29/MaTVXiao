@@ -4857,6 +4857,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             cell.set(x, base - Ui.cap(bbChip), x + 5 * k, base);
             c.drawRoundRect(cell, 2.5f * k, 2.5f * k, fill);
             String label = p.tag != null ? p.tag : Ui.trf("On {app}", "app", service);
+            String[] mood = Recs.mood();
+            if (p.tag == null && !mood[0].equals("all")) label = mood[1] + "  ·  " + label;   // the mood picked shows
             c.drawText(label, x + 16 * k, base, bbChip);
         }
         if (!meta.isEmpty()) c.drawText(fit(meta, bbMeta, maxW), x, metaBase, bbMeta);

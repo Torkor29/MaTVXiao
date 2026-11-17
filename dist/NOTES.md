@@ -1,1 +1,1 @@
-Dock : le verre derrière les applis est lisse (il pouvait apparaître en gros carrés sur Android 8 à 12). Contient le nouvel accueil de la 2.6.0.
+Suggestions selon ton humeur : Rire, Action, Frissons, Enquête, Émotion, Évasion, En famille, Découvrir (ou Tout). Sur la TV : Réglages › Suggestions › Humeur, ou depuis le téléphone (MaTV Connect › Ma TV).

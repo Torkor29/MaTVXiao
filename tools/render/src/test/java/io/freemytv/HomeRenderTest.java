@@ -113,7 +113,9 @@ public class HomeRenderTest {
         return f.get(o);
     }
 
-    void run(String style, String theme, String name) throws Exception {
+    void run(String style, String theme, String name) throws Exception { run(style, theme, name, "all"); }
+
+    void run(String style, String theme, String name, String mood) throws Exception {
         org.robolectric.shadows.ShadowLog.stream = System.out;
         installApps();
         String key = System.getProperty("tmdbKey", "");
@@ -121,6 +123,7 @@ public class HomeRenderTest {
         Prefs.setTheme(theme);
         Prefs.setTopContent(Prefs.TOP_PICKS);
         Prefs.setTopStyle(style);
+        Prefs.setPicksMood(mood);
         ActivityController<HomeActivity> ctl = Robolectric.buildActivity(HomeActivity.class).setup();
         settle(Integer.getInteger("waitMs", 25000));
         System.out.println("RECS " + Recs.status(RuntimeEnvironment.getApplication()));
@@ -136,5 +139,6 @@ public class HomeRenderTest {
     }
 
     @Test public void billboardDark() throws Exception { run("billboard", "dark", "home-billboard-dark"); }
+    @Test public void moodLaugh() throws Exception { run("billboard", "dark", "home-mood-laugh", "laugh"); }
     @Test public void cardsDark() throws Exception { run("cards", "dark", "home-cards-dark"); }
 }

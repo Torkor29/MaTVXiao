@@ -354,6 +354,10 @@ public class MaTVSettingsActivity extends Activity {
         Category picks = add("cat_picks", "Suggestions", "Tendances et nouveautés de tes services.");
         Opt state = info(picks, "État", this::picksState);
         state.about = this::picksStateLong;
+        String[] moodIds = new String[Recs.MOODS.length], moodNames = new String[Recs.MOODS.length];
+        for (int i = 0; i < Recs.MOODS.length; i++) { moodIds[i] = Recs.MOODS[i][0]; moodNames[i] = Recs.MOODS[i][1]; }
+        choice(picks, "Humeur", "Le genre des suggestions : rire, frissons, émotion… Tout garde un peu de chaque. Aussi depuis ton téléphone.",
+                moodIds, moodNames, Prefs::picksMood, v -> { Prefs.setPicksMood(v); Recs.get(c).refreshIfStale(); });
         choice(picks, "Présentation", "Affiche : une grande image, comme Netflix. Cartes : comme l'Apple TV.",
                 Prefs.TOP_STYLES, new String[] {"Affiche", "Cartes"}, Prefs::topStyle, Prefs::setTopStyle);
         choice(picks, "Nombre de titres", "Combien de suggestions à la fois.",

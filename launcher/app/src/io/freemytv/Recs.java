@@ -65,6 +65,44 @@ final class Recs {
 
     interface Listener { void onRecs(); }
 
+    /**
+     * Moods for the picks: id, name, TMDB's movie genres, its TV genres (TV has no horror or romance of its own, so
+     * the nearest ones). "all" keeps every genre.
+     */
+    static final String[][] MOODS = {
+        {"all", "Tout", "", ""},
+        {"laugh", "Rire", "35", "35"},
+        {"action", "Action", "28|12", "10759"},
+        {"thrill", "Frissons", "27|53", "9648|80"},
+        {"mystery", "Enquête", "80|9648", "80|9648"},
+        {"feel", "Émotion", "18|10749", "18"},
+        {"escape", "Évasion", "878|14", "10765"},
+        {"family", "En famille", "10751|16", "10751|10762|16"},
+        {"learn", "Découvrir", "99|36", "99"},
+    };
+
+    static String[] mood() {
+        String want = Prefs.picksMood();
+        for (String[] m : MOODS) if (m[0].equals(want)) return m;
+        return MOODS[0];
+    }
+
+    /** The genres of the mood for `kind`, or "" for every genre. */
+    private static String moodGenres(String kind) {
+        String[] m = mood();
+        return kind.equals("movie") ? m[2] : m[3];
+    }
+
+    private static boolean inMood(JSONObject o, String kind) {
+        String want = moodGenres(kind);
+        if (want.isEmpty()) return true;
+        JSONArray genres = o.optJSONArray("genre_ids");
+        for (int i = 0; genres != null && i < genres.length(); i++) {
+            for (String g : want.split("\\|")) if (g.equals(String.valueOf(genres.optInt(i)))) return true;
+        }
+        return false;
+    }
+
     // TMDB's own mirror of api.themoviedb.org, on the images' domain: some ISPs block the other name (Jio, #327)
     private static final String API = "https://api.tmdb.org/3";
     /** The most cards per tab and hour (Prefs.cards() picks how many, 3 by default); the home screen shows 3 at a time and scrolls. */
@@ -623,7 +661,7 @@ final class Recs {
         for (String kind : new String[] {"movie", "tv"}) {
             JSONArray hot = get("/trending/" + kind + "/week?language=" + lang()).getJSONArray("results");
             List<Pick> candidates = new ArrayList<>();
-            for (int i = 0; i < hot.length() && i < 20; i++) add(candidates, hot.getJSONObject(i), kind);
+            for (int i = 0; i < hot.length() && i < 20; i++) if (inMood(hot.getJSONObject(i), kind)) add(candidates, hot.getJSONObject(i), kind);
             for (Pick pick : candidates) {
                 if (watched.contains(key(pick))) continue;
                 try {
@@ -636,13 +674,27 @@ final class Recs {
         }
         // 2. Recent releases on the TV's services: movies from the past year and shows with a new episode in the
         //    past 3 months.
+        String mg = moodGenres("movie"), tg = moodGenres("tv");
+        String movieMood = mg.isEmpty() ? "" : "&with_genres=" + URLEncoder.encode(mg, "UTF-8");
+        String showMood = tg.isEmpty() ? "" : "&with_genres=" + URLEncoder.encode(tg, "UTF-8");
         JSONArray movies = get("/discover/movie?vote_count.gte=30&primary_release_date.gte=" + day(-365)
-                + "&primary_release_date.lte=" + day(0) + common).getJSONArray("results");
+                + "&primary_release_date.lte=" + day(0) + common + movieMood).getJSONArray("results");
         JSONArray shows = get("/discover/tv?vote_count.gte=20&air_date.gte=" + day(-90) + "&air_date.lte=" + day(0)
-                + common).getJSONArray("results");
+                + common + showMood).getJSONArray("results");
         List<Pick> newMovies = new ArrayList<>(), newShows = new ArrayList<>();
         for (int i = 0; i < movies.length(); i++) add(newMovies, movies.getJSONObject(i), "movie");
         for (int i = 0; i < shows.length(); i++) add(newShows, shows.getJSONObject(i), "tv");
+        // 3. With a mood, the genre's well-loved titles on the TV's services too: trending and new releases alone can
+        //    leave few comedies some weeks.
+        List<Pick> moodMovies = new ArrayList<>(), moodShows = new ArrayList<>();
+        if (!mg.isEmpty()) {
+            JSONArray more = get("/discover/movie?vote_count.gte=300" + common + movieMood).getJSONArray("results");
+            for (int i = 0; i < more.length(); i++) add(moodMovies, more.getJSONObject(i), "movie");
+            JSONArray moreShows = get("/discover/tv?vote_count.gte=150" + common + showMood).getJSONArray("results");
+            for (int i = 0; i < moreShows.length(); i++) add(moodShows, moreShows.getJSONObject(i), "tv");
+            moodMovies.removeIf(x -> watched.contains(key(x)));
+            moodShows.removeIf(x -> watched.contains(key(x)));
+        }
         // One title of your Plex library per kind (one of the newest 8, another each time the list is made) among the
         // trending ones: a surprise, not half the row. Its images come now, so a server that sleeps later leaves no gray card.
         if (plexOn()) {
@@ -696,6 +748,7 @@ final class Recs {
         int ours = list.size();
         alternate(list, seen, hotMovies, hotShows, ours + POOL);
         alternate(list, seen, newMovies, newShows, ours + POOL);
+        alternate(list, seen, moodMovies, moodShows, ours + POOL);
         if (list.isEmpty()) throw new IOException("TMDB returned no recommendations");
         picks = list;
         traktStamp = account;
@@ -1037,6 +1090,8 @@ final class Recs {
 
     private long sourceStamp() {
         long stamp = ((key().hashCode() * 31L + REGION.hashCode()) * 31L + (Config.HIDE_ANIMATION ? 1 : 0)) * 31L + Config.PLEX_URL.hashCode();
+        String mood = Prefs.picksMood();
+        if (!mood.equals("all")) stamp = stamp * 31L + mood.hashCode();   // "all": the same stamp as before
         if (stremio()) stamp = stamp * 31L + 1;   // off: the same stamp as before, so nothing is fetched again
         for (String[] service : SERVICES) stamp = stamp * 31L + (installed(service[2]) ? service[2].hashCode() : 0);
         return stamp;
