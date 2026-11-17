@@ -8,14 +8,19 @@ Pour la **Xiaomi TV A Pro 55"** (Google TV 14), et toute TV Android TV / Google 
 | **MaTV Live** `apk/MaTV-Live.apk` | nouvelle appli | Lecteur IPTV avec codes Xtream : chaînes avec guide, films, séries, favoris |
 | **TizenTube** | [reisxd/TizenTubeCobalt](https://github.com/reisxd/TizenTubeCobalt) | YouTube sans pub, avec SponsorBlock, téléchargé à jour par l'installeur |
 
-## Installer (Windows, environ 10 minutes)
+## Installer sur une TV (environ 10 minutes, rien à taper)
 
-1. **Sur la TV** : Paramètres → Système → À propos → appuie 7 fois sur *Build du système Android TV*. Puis Paramètres → Système → Options pour les développeurs → **Débogage USB** activé. Note l'adresse IP (Paramètres → Réseau et Internet).
-2. **Sur le PC** (même Wi-Fi) : décompresse ce dossier, double-clique **`install.bat`**, tape l'IP de la TV.
-   Accepte *Autoriser le débogage USB ?* sur la TV en cochant *Toujours autoriser*. Si Play Protect affiche *Appli à risque*, choisis *Plus d'infos* → *Installer quand même*.
-3. **Sur la TV** : ouvre **Free My TV** → *Écran d'accueil* → *Free My TV*, puis accepte encore une fois le débogage.
+Il suffit d'un ordinateur sur **le même Wi‑Fi que la TV**. L'installeur trouve tout seul les TV du réseau, affiche leur nom et installe sur celle que tu choisis (ou sur toutes).
 
-`adb` est téléchargé tout seul depuis Google s'il manque.
+1. **Sur la TV, une seule fois** : Paramètres → Système → À propos → appuie 7 fois sur *Build du système Android TV*. Puis Paramètres → Système → Options pour les développeurs → **Débogage USB** activé. *(Android TV l'exige pour installer une appli depuis un ordinateur ; si tu l'oublies, l'installeur te guide et attend.)*
+2. **Sur l'ordinateur** :
+   - **Windows** : télécharge [`Installer-MaTV.bat`](https://github.com/Torkor29/MaTVXiao/releases/latest/download/Installer-MaTV.bat) et double-clique dessus.
+   - **Mac / Linux** : dans le Terminal, `curl -fsSL https://raw.githubusercontent.com/Torkor29/MaTVXiao/main/install.sh | bash`
+   
+   Choisis la TV dans la liste. Sur la TV, accepte *Autoriser le débogage USB ?* en cochant *Toujours autoriser*. Si Play Protect affiche *Appli à risque* : *Plus d'infos* → *Installer quand même*.
+3. **Sur la TV** : ouvre l'appli **MaTV** → *Système* → *Écran d'accueil* → **MaTV**, puis accepte encore une fois le débogage.
+
+L'installeur télécharge lui-même `adb` (chez Google), la dernière version de MaTV et TizenTube. Relancé plus tard, il ne réinstalle que ce qui a changé. Pour viser une TV précise : `install.bat 192.168.1.42` (ou `… | bash -s 192.168.1.42`).
 
 ## Régler sur la TV
 
@@ -27,7 +32,7 @@ Pour la **Xiaomi TV A Pro 55"** (Google TV 14), et toute TV Android TV / Google 
 - **Écran de veille** : **Fonds d'écran** (tes images, en plein écran) ou suggestions, la collection qui défile, durée par image, horloge, légende, aperçu. Les fonds se gèrent depuis le téléphone (MaTV Connect).
 - **Widgets** : météo, ville, prévisions, lecture en cours, cours des cryptos.
 - **Téléphone** : le QR code de MaTV Connect.
-- **Système** : écran d'accueil (retour à l'ancienne TV avec *Original*), langue, télécommande, minuterie de veille, mises à jour, réglages de la TV.
+- **Système** : écran d'accueil (retour à l'ancienne TV avec *Accueil d'origine*), langue, télécommande, minuterie de veille, mises à jour, réglages de la TV.
 
 *Boutons de la télécommande* → **YouTube** → *TizenTube* : le bouton YouTube ouvre la version sans pub.
 
@@ -79,7 +84,7 @@ Avant chaque installation, la TV vérifie que le fichier vient bien de ce dépô
 
 Les clés de signature (`launcher/freemytv.keystore` et `iptv/matvlive.keystore`) ne sont **jamais** sur GitHub. Garde-en une copie : sans elles, une nouvelle version ne pourra pas s'installer par-dessus l'ancienne.
 
-`install.bat` reste utile pour une première installation ou une nouvelle TV : il télécharge la dernière version publiée et ne réinstalle que ce qui a changé.
+Pour une nouvelle TV, `Installer-MaTV.bat` (ou `install.sh`) suffit : il trouve la TV sur le Wi‑Fi. Ensuite elle se met à jour toute seule.
 
 ## Clé TMDB
 
