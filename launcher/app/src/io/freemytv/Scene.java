@@ -3,6 +3,9 @@ package io.freemytv;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
+import android.graphics.Rect;
+import java.util.HashMap;
+import java.util.Map;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -247,7 +250,31 @@ final class Scene {
      * screen with bilinear filtering, the small copy reads as a wide blur. ~20k to 130k pixel reads: well under a
      * millisecond, so it can run on every step of a photo fade.
      */
-    private static BitmapShader soften(int[] src, int srcW, int f, int w, int h, int[] px, Bitmap into) {
+    /**
+     * The soft copies are drawn UP times larger, smoothed on the CPU, before they become the glass's shader: below
+     * Android 13 a BitmapShader may be sampled without filtering, and a 60 × 33 copy then showed as big squares.
+     */
+    private static final int UP = 4;
+    private final Map<Bitmap, Bitmap> upscaled = new HashMap<>();
+    private final Map<Bitmap, Canvas> upCanvas = new HashMap<>();
+    private final Paint upPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+    private final Rect upFrom = new Rect(), upTo = new Rect();
+
+    private BitmapShader soften(int[] src, int srcW, int f, int w, int h, int[] px, Bitmap into) {
+        BitmapShader small = softenSmall(src, srcW, f, w, h, px, into);
+        Bitmap big = upscaled.get(into);
+        if (big == null) {
+            big = Bitmap.createBitmap(w * UP, h * UP, Bitmap.Config.ARGB_8888);
+            upscaled.put(into, big);
+            upCanvas.put(into, new Canvas(big));
+        }
+        upFrom.set(0, 0, w, h);
+        upTo.set(0, 0, w * UP, h * UP);
+        upCanvas.get(into).drawBitmap(into, upFrom, upTo, upPaint);
+        return small == null ? null : Frost.filter(new BitmapShader(big, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP), BitmapShader.FILTER_MODE_LINEAR);
+    }
+
+    private static BitmapShader softenSmall(int[] src, int srcW, int f, int w, int h, int[] px, Bitmap into) {
         int n = f * f;
         for (int y = 0; y < h; y++) {
             int rowBase = y * f * srcW;
@@ -283,7 +310,7 @@ final class Scene {
         if (liquid == null) {
             if (imageGlass && softShaderA != null) {
                 // Mapped by what the copy covers: 270 / 8 = 33.75 rows, of which the bitmap holds 33.
-                bitmapGlass(c, r, radius, softShaderA, Backdrop.GW / (float) SOFT, Backdrop.GH / (float) SOFT, softShaderB,
+                bitmapGlass(c, r, radius, softShaderA, Backdrop.GW * UP / (float) SOFT, Backdrop.GH * UP / (float) SOFT, softShaderB,
                         glassMix, tint, Math.max(0.5f, tintAlpha), lift, 1, specular, alpha);
             } else {
                 glassRaw(c, r, radius, tint, Math.max(0.5f, tintAlpha), 0, 0, lift, 1, alpha);
@@ -394,7 +421,7 @@ final class Scene {
     private void glassRaw(Canvas c, RectF r, float radius, int tint, float tintAlpha, int glow, float glowAlpha, float lift, float body, float alpha) {
         if (glass == null) {
             if (imageFrost && softShaderFrost != null) {
-                bitmapGlass(c, r, radius, softShaderFrost, Backdrop.FW / (float) SOFT_FROST, Backdrop.FH / (float) SOFT_FROST, null, 0,
+                bitmapGlass(c, r, radius, softShaderFrost, Backdrop.FW * UP / (float) SOFT_FROST, Backdrop.FH * UP / (float) SOFT_FROST, null, 0,
                         tint, Math.max(0.35f, tintAlpha), lift, body, 1, alpha);
                 return;
             }

@@ -1,1 +1,1 @@
-Accueil redessiné, mode Affiche : l'image du titre en plein écran (elle ne s'affichait plus), le logo officiel du film ou de la série, le service, genre · durée · année · note, un résumé, et les vignettes au-dessus du dock. Mode Cartes : les titres ne se chevauchent plus.
+Dock : le verre derrière les applis est lisse (il pouvait apparaître en gros carrés sur Android 8 à 12). Contient le nouvel accueil de la 2.6.0.

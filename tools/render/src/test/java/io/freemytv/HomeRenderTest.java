@@ -30,7 +30,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @LooperMode(LooperMode.Mode.PAUSED)
-@Config(sdk = 30, qualifiers = "fr-rFR-w960dp-h540dp-land-television-xhdpi")
+@Config(sdk = 30, qualifiers = "fr-rFR-w960dp-h540dp-land-television-xhdpi", shadows = BannerShadow.class)
 public class HomeRenderTest {
     static final String[][] APPS = {
         {"com.netflix.ninja", "Netflix", "E50914"}, {"com.google.android.youtube.tv", "YouTube", "FF0033"},
@@ -61,15 +61,20 @@ public class HomeRenderTest {
 
     /** A stand-in for the app's TV banner: its colour and name (the real apps bring their own art). */
     static android.graphics.drawable.Drawable banner(android.content.Context c, String name, String hex) {
-        Bitmap b = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888);
+        Bitmap b = Bitmap.createBitmap(640, 360, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(b);
-        cv.drawColor(0xFF000000 | Integer.parseInt(hex, 16));
+        int col = 0xFF000000 | Integer.parseInt(hex, 16);
+        android.graphics.Paint bg = new android.graphics.Paint();
+        bg.setShader(new android.graphics.LinearGradient(0, 0, 640, 360, col, android.graphics.Color.rgb(
+                Math.max(0, android.graphics.Color.red(col) - 40), Math.max(0, android.graphics.Color.green(col) - 40),
+                Math.max(0, android.graphics.Color.blue(col) - 40)), android.graphics.Shader.TileMode.CLAMP));
+        cv.drawRect(0, 0, 640, 360, bg);
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         p.setColor(0xFFFFFFFF);
-        p.setTextSize(40);
-        p.setFakeBoldText(true);
+        p.setTextSize(78);
+        p.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD));
         p.setTextAlign(android.graphics.Paint.Align.CENTER);
-        cv.drawText(name, 160, 104, p);
+        cv.drawText(name, 320, 205, p);
         return new android.graphics.drawable.BitmapDrawable(c.getResources(), b);
     }
 
@@ -84,7 +89,7 @@ public class HomeRenderTest {
             pi.applicationInfo.nonLocalizedLabel = app[1];
             pi.applicationInfo.flags = ApplicationInfo.FLAG_INSTALLED;
             spm.installPackage(pi);
-            spm.setApplicationIcon(app[0], banner(c, app[1], app[2]));
+            BannerShadow.BANNERS.put(app[0], banner(c, app[1], app[2]));
             ComponentName cn = new ComponentName(app[0], app[0] + ".Main");
             spm.addActivityIfNotPresent(cn);
             for (String cat : new String[] {Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
