@@ -52,6 +52,12 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Xcode 26 (the App Store takes only builds made with it since April 2026)
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$X" ] || { echo "Pas de Xcode 26 sur ce Mac : passer runs-on à macos-26"; ls -d /Applications/Xcode*; exit 1; }
+          sudo xcode-select -s "$X"
+          xcodebuild -version
       - name: Xcode project
         run: brew install xcodegen && cd mobile/ios && xcodegen
       - name: Simulator (the largest iPhone, for the App Store's 6.9" screenshots)
