@@ -53,8 +53,8 @@ main{padding:calc(var(--safe-t) + 14px) 18px calc(110px + var(--safe-b));max-wid
 /* Navigation: a glass tab bar on phones, a column on wide screens */
 nav.tabs{position:fixed;z-index:20;left:50%;bottom:calc(12px + var(--safe-b));transform:translateX(-50%);display:flex;gap:2px;padding:6px;border-radius:999px;
   background:rgba(28,30,40,.55);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);border:1px solid var(--edge);box-shadow:0 20px 50px rgba(0,0,0,.45)}
-nav.tabs{width:min(calc(100% - 24px),440px)}
-nav.tabs button{flex:1;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 6px;border-radius:999px;color:var(--ink3);font-size:11px;font-weight:600;letter-spacing:.01em;transition:color .25s,background .25s}
+nav.tabs{width:min(calc(100% - 16px),440px)}
+nav.tabs button{flex:1;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;letter-spacing:-.01em;border-radius:999px;color:var(--ink3);font-size:10.5px;font-weight:600;transition:color .25s,background .25s}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button[aria-current="page"]{color:var(--ink);background:rgba(255,255,255,.12)}
 .brand{display:none}
@@ -181,8 +181,9 @@ button.row{width:100%;text-align:left;color:inherit}
   transform:translateY(105%);transition:transform .45s var(--ease),visibility 0s linear .45s}
 .sheet{visibility:hidden}
 .sheet.on{transform:none;visibility:visible;transition:transform .45s var(--ease),visibility 0s}
-.sheet .grab{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:0 auto 14px}
-@media (min-width:760px){.sheet{left:50%;right:auto;bottom:auto;top:50%;width:min(720px,92vw);border-radius:28px;border:1px solid var(--edge);transform:translate(-50%,-46%) scale(.96);opacity:0;transition:transform .4s var(--ease),opacity .3s,visibility 0s linear .4s}
+.sheet .top{position:sticky;top:-10px;z-index:2;display:flex;align-items:center;justify-content:flex-end;height:46px;margin:-10px -20px 6px;padding:0 14px;background:linear-gradient(rgba(26,28,38,.97) 70%,rgba(26,28,38,0))}
+.sheet .grab{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)}
+@media (min-width:760px){.sheet{max-height:88vh;left:50%;right:auto;bottom:auto;top:50%;width:min(720px,92vw);border-radius:28px;border:1px solid var(--edge);transform:translate(-50%,-46%) scale(.96);opacity:0;transition:transform .4s var(--ease),opacity .3s,visibility 0s linear .4s}
   .sheet.on{transform:translate(-50%,-50%);opacity:1;visibility:visible;transition:transform .4s var(--ease),opacity .3s,visibility 0s}.sheet .grab{display:none}}
 .sheet .tv{margin:6px 0 18px}
 .sheet .meta{color:var(--ink2);font-size:14px;margin:6px 0 0}
@@ -190,7 +191,7 @@ button.row{width:100%;text-align:left;color:inherit}
 .sheet h3{font:650 15px var(--ui);color:var(--ink2);margin:22px 0 10px}
 .sheet .bar{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
 .sheet .bar .btn{flex:1 1 180px;white-space:nowrap}
-.close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.close{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:none}
 .close svg{width:16px;height:16px}
 
 /* Crop: a 16:9 window over the photo */
@@ -248,7 +249,10 @@ button.row{width:100%;text-align:left;color:inherit}
 .toast.on{transform:translate(-50%,0);visibility:visible;transition:transform .45s var(--spring),visibility 0s}
 .toast.bad{color:var(--warn)}
 .selbar{position:fixed;z-index:30;left:50%;bottom:calc(88px + var(--safe-b));transform:translate(-50%,180%);display:flex;gap:6px;padding:8px;border-radius:999px;background:rgba(28,30,40,.75);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--edge);transition:transform .4s var(--spring);box-shadow:0 20px 50px rgba(0,0,0,.45)}
-.selbar{visibility:hidden;opacity:0}
+.selbar{visibility:hidden;opacity:0;max-width:calc(100vw - 16px)}
+.selbar .btn{padding:0 14px}
+@media (max-width:430px){.selbar .count{display:none}.selbar .btn{padding:0 12px;gap:6px}}
+@media (max-width:360px){.selbar .btn span{display:none}.selbar .btn{width:46px;padding:0}}
 .selbar.on{transform:translate(-50%,0);visibility:visible;opacity:1}
 @media (min-width:980px){.selbar{bottom:28px;margin-left:120px}}
 .view{animation:in .5s var(--ease)}
@@ -540,8 +544,8 @@ function viewDiscover() {
   ${S.search ? "" : `<div class="rail" role="list">${themes.map(t => `<button class="theme" role="listitem" data-theme="${esc(t.id)}" aria-pressed="${t.id === S.theme}">
       <img loading="lazy" src="${esc((t.items[t.cover || 0] || t.items[0] || {}).th || "")}" alt="">
       <span class="name"><b>${esc(t.name)}</b><span>${fmt(t.items.length)} images</span></span></button>`).join("")}</div>`}
-  <h2>${S.search ? `« ${esc(S.search.q)} »` : esc((themes.find(t => t.id === S.theme) || {}).name || "")} <small>${S.searching ? "Recherche…" : fmt(list.length) + " images"}</small></h2>
-  ${!S.index ? `<p class="note">Chargement de la bibliothèque…</p>` : list.length ? `<div class="grid">${tiles}</div>` : `<p class="note">${S.searching ? "Recherche…" : "Aucune image en paysage assez grande pour cette recherche. Essaie un autre mot, en anglais par exemple."}</p>`}
+  <h2>${S.search ? `« ${esc(S.search.q)} »` : esc((themes.find(t => t.id === S.theme) || {}).name || "")} <small>${S.searching ? "Recherche…" : S.search && S.search.failed ? "" : fmt(list.length) + " images"}</small></h2>
+  ${!S.index ? `<p class="note">Chargement de la bibliothèque…</p>` : list.length ? `<div class="grid">${tiles}</div>` : `<p class="note">${S.searching ? "Recherche…" : S.search && S.search.failed ? "Wikimedia ne répond pas pour l'instant. Réessaie dans un moment, ou choisis un thème." : "Aucune image en paysage assez grande pour cette recherche. Essaie un autre mot, en anglais par exemple."}</p>`}
   ${list.length > S.shown ? `<div class="more"><button class="btn" data-act="more">Voir plus</button></div>` : ""}
   <p class="credit">Images de <a href="https://commons.wikimedia.org" target="_blank" rel="noreferrer">Wikimedia Commons</a>, sous licence libre. L'auteur et la licence restent avec chaque image.</p>`;
 }
@@ -571,7 +575,7 @@ async function searchCommons(q) {
         th: ii.thumburl, u: ii.width <= 3840 ? ii.url : ii.thumburl.replace("/960px-", "/3840px-"),
         p: "https://commons.wikimedia.org/wiki/" + encodeURIComponent(pg.title.replace(/ /g, "_"))};
     }).filter(Boolean);
-  } catch (e) { toast("Recherche impossible pour l'instant.", true); }
+  } catch (e) { S.search.failed = true; }
   S.searching = false;
   if (S.view === "discover") render();
 }
@@ -631,7 +635,7 @@ function viewLibrary() {
   const counts = {}; items().forEach(w => counts[w.collection] = (counts[w.collection] || 0) + 1);
   return `
   <h1 class="large">Mes fonds</h1>
-  <p class="sub">${fmt(items().length)} sur la TV · ${fmt(inRotation().length)} en rotation</p>
+  <p class="sub">${S.selecting ? `${fmt(S.selected.size)} sélectionné${S.selected.size > 1 ? "s" : ""} · touche les fonds à modifier` : `${fmt(items().length)} sur la TV · ${fmt(inRotation().length)} en rotation`}</p>
   <div class="toolbar">
     <button class="btn primary small" data-act="import">${I.upload}Importer</button>
     <button class="btn small" data-act="select">${S.selecting ? "Terminé" : "Sélectionner"}</button>
@@ -651,10 +655,10 @@ function selbar() {
   const on = S.view === "library" && S.selecting;
   bar.classList.toggle("on", on && S.selected.size > 0);
   if (!on) return;
-  bar.innerHTML = `<span class="pill" style="border:0;background:none">${fmt(S.selected.size)} choisi${S.selected.size > 1 ? "s" : ""}</span>
-    <button class="btn small" data-act="bulkmove">${I.folder}Déplacer</button>
-    <button class="btn small" data-act="bulkrot">${I.eye}Rotation</button>
-    <button class="btn small danger" data-act="bulkdel">${I.trash}Supprimer</button>`;
+  bar.innerHTML = `<span class="pill count" style="border:0;background:none">${fmt(S.selected.size)} choisi${S.selected.size > 1 ? "s" : ""}</span>
+    <button class="btn small" data-act="bulkmove" aria-label="Déplacer">${I.folder}<span>Déplacer</span></button>
+    <button class="btn small" data-act="bulkrot" aria-label="Rotation">${I.eye}<span>Rotation</span></button>
+    <button class="btn small danger" data-act="bulkdel" aria-label="Supprimer">${I.trash}<span>Supprimer</span></button>`;
 }
 
 function sheetWall(w) {
@@ -831,7 +835,7 @@ function sendText() { const t = $("#txt"); if (!t.value) return; const v = t.val
 /* ---------- Sheets ---------- */
 function openSheet(html, wire) {
   const sh = $("#sheet");
-  sh.innerHTML = `<div class="grab"></div><button class="close" aria-label="Fermer">${I.x}</button>` + html;
+  sh.innerHTML = `<div class="top"><div class="grab"></div><button class="close" aria-label="Fermer">${I.x}</button></div>` + html;
   $(".close", sh).onclick = closeSheet;
   $("#scrim").classList.add("on"); sh.scrollTop = 0;
   requestAnimationFrame(() => sh.classList.add("on"));
@@ -862,7 +866,11 @@ async function onClick(e) {
   if (d.filter) { S.filter = d.filter; return render(); }
   if (d.app) { buzz(); return api("/api/launch", {json: {pkg: d.app}}).then(() => toast("Ouvert sur la TV")).catch(x => toast(x.message, true)); }
   if (d.wall) {
-    if (S.selecting) { S.selected.has(d.wall) ? S.selected.delete(d.wall) : S.selected.add(d.wall); t.classList.toggle("sel"); return selbar(); }
+    if (S.selecting) {
+      S.selected.has(d.wall) ? S.selected.delete(d.wall) : S.selected.add(d.wall); t.classList.toggle("sel");
+      const sub = document.querySelector("#main .sub"); if (sub) sub.textContent = `${fmt(S.selected.size)} sélectionné${S.selected.size > 1 ? "s" : ""} · touche les fonds à modifier`;
+      return selbar();
+    }
     const w = items().find(x => x.id === d.wall); return w && sheetWall(w);
   }
   if (d.set) return setSaver(d.set, d.v, t);

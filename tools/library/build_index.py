@@ -1,5 +1,5 @@
 """Packs the crawled Commons lists into the web app's library index (library/index.json)."""
-import json, os, sys, time
+import json, os, re, sys, time
 src, out = sys.argv[1], sys.argv[2]
 THEMES = [("landscapes", "Paysages"), ("mountains", "Montagnes"), ("lakes", "Lacs"), ("sea", "Mer & plages"),
           ("sunsets", "Couchers de soleil"), ("waterfalls", "Cascades"), ("forests", "Forêts"), ("clouds", "Ciel & nuages"),
@@ -15,6 +15,14 @@ for tid, name in THEMES:
         for it in json.load(open(p)):
             if it["id"] in seen: continue
             seen.add(it["id"]); items.append(it)
+    for it in items:
+        t = re.sub(r"[_]+", " ", it["t"])
+        t = re.sub(r",?\s*\d{4}-\d{2}-\d{2}.*$", "", t)          # ", 2016-02-01, DD 42": the photographer's own tags
+        t = re.sub(r"^\d+\s*[-–]\s*", "", t)                       # "01-…"
+        t = re.sub(r"\s*\((cropped|edited|retouched)[^)]*\)", "", t, flags=re.I)
+        t = re.sub(r"(\s+(DSC|IMG|P|DJI|CRW)?[-_ ]?\d{3,}[a-z]?)+$", "", t, flags=re.I)   # camera numbers and dates at the end
+        t = re.sub(r"\s*[-–,]\s*$", "", t).strip()
+        it["t"] = t or it["t"]
     if len(items) < 8: continue
     # Largest first: the sharpest on a 4K panel lead each theme.
     items.sort(key=lambda i: -min(i["w"], 7000) * min(i["h"], 4000))
