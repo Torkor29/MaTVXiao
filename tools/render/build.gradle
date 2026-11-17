@@ -11,7 +11,7 @@ android {
         res.srcDirs = ["$L/app/res", "$L/out/res"]
         assets.srcDirs = ["$L/app/assets"]
     }
-    testOptions.unitTests { includeAndroidResources = true; all { maxHeapSize = '3g'; systemProperty 'robolectric.graphicsMode', 'NATIVE'; systemProperty 'shots', "$rootDir/shots" } }
+    testOptions.unitTests { includeAndroidResources = true; all { maxHeapSize = '3g'; systemProperty 'robolectric.graphicsMode', 'NATIVE'; systemProperty 'shots', "$rootDir/shots"; systemProperty 'tmdbKey', System.getenv('TMDB_KEY') ?: ''; testLogging.showStandardStreams = true } }
     lint { abortOnError false; checkReleaseBuilds false }
     aaptOptions { noCompress 'ttf' }
 }

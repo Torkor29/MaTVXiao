@@ -213,6 +213,13 @@ final class HomeApps {
         return items;
     }
 
+    /** The app's brand colour (0xFFRRGGBB) when it's one of the shelf's known apps, else 0. */
+    static int brandColor(String pkg) {
+        String[] d = pkg == null ? null : known(pkg);
+        if (d == null) return 0;
+        try { return 0xFF000000 | Integer.parseInt(d[3], 16); } catch (RuntimeException e) { return 0; }
+    }
+
     private static String[] known(String pkg) {
         for (String[] d : SHELF) if (d[2].equals(pkg)) return d;
         return null;

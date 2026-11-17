@@ -433,5 +433,6 @@
  "{time} left": "απομένουν {time}",
  "{url}, code {code}": "{url}, κωδικός {code}",
  "{version} is out: build it again": "Βγήκε η {version}: φτιάξτε το ξανά",
- "← → to move · OK to drop · Back to cancel": "← → μετακίνηση · OK τοποθέτηση · Πίσω ακύρωση"
+ "← → to move · OK to drop · Back to cancel": "← → μετακίνηση · OK τοποθέτηση · Πίσω ακύρωση",
+ "On {app}": "Στο {app}"
 }

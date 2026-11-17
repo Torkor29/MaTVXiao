@@ -115,7 +115,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private String bbKey = "";
     private long bbAt;
     private static final long BB_FADE_MS = 650;
-    private static final float BB_TITLE_BASE = 340, BB_THUMB_TOP = 528, BB_THUMB_W = 320, BB_THUMB_H = 180, BB_THUMB_GAP = 30;
+    private static final float BB_TITLE_BASE = 340, BB_THUMB_TOP = 528, BB_THUMB_W = 240, BB_THUMB_H = 135, BB_THUMB_GAP = 22, BB_TABBAR_TOP = 69;
     private static final float TILE_RADIUS = 22;
     // Tile focus (Apple TV style): it grows from the center and its shadow drops (it "rises" toward the viewer).
     private static final float FOCUS_GROW = 0.2f;
@@ -850,6 +850,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     @Override public void onRecs() {
         wake();
         updatePicks();
+        heroDirty = true;   // a title logo can arrive with no other change
+        heroLayer.invalidate();
     }
 
     private void invalidateAll() {
@@ -1443,7 +1445,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void applyWatchContrast() {
         int card = blend(tintFrom, tintTo, Ui.clamp(tintMix.value));
         int behind = plainAt((L_CARDS_TOP + WatchArt.H + 70) * k / Math.max(1, h), card);
-        int quoteBg = plainAt((L_TABBAR_TOP + L_TABBAR_H / 2) * k / Math.max(1, h), card);
+        int quoteBg = plainAt((tabBarTop() + L_TABBAR_H / 2) * k / Math.max(1, h), card);
         int title = lCardTitle.getColor(), meta = lCardMeta.getColor(), quote = lQuote.getColor();
         if (!watchColorsReady || behind != watchTextBg || quoteBg != watchQuoteBg
                 || title != watchTitleInk || meta != watchMetaInk || quote != watchQuoteInk) {
@@ -1499,6 +1501,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void loadBillboard() {
         if (!billboard || !picksMode() || cards.isEmpty() || w <= 0) return;
         final Recs.Pick p = cards.get(Math.min(cardIndex, cards.size() - 1));
+        for (Recs.Pick near : cards) recs.logo(near);   // the title logos, ready before their pick comes up
         final String key = Recs.key(p);
         if (key.equals(bbKey)) return;
         final java.io.File f = recs.readyImage(p);
@@ -1532,6 +1535,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         android.graphics.BitmapFactory.decodeFile(f.getPath(), b);
         if (b.outWidth <= 0) throw new java.io.IOException("unreadable");
         android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inSampleSize = 1;   // the default 0 made this a division by zero: the billboard never showed its photo
         while (b.outWidth / (o.inSampleSize * 2) >= w && b.outHeight / (o.inSampleSize * 2) >= h) o.inSampleSize *= 2;
         Bitmap src = android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
         if (src == null) throw new java.io.IOException("unreadable");
@@ -1544,8 +1548,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         c.drawBitmap(src, null, new RectF(w - dw, 0, w, dh), p);
         src.recycle();
         Paint g = new Paint(Paint.DITHER_FLAG);
-        g.setShader(new LinearGradient(0, 0, w * 0.72f, 0, new int[] {0xF2000000, 0xB3000000, 0x40000000, 0x00000000},
-                new float[] {0, 0.35f, 0.75f, 1}, Shader.TileMode.CLAMP));
+        g.setShader(new LinearGradient(0, 0, w * 0.78f, 0, new int[] {0xE6000000, 0xA6000000, 0x33000000, 0x00000000},
+                new float[] {0, 0.38f, 0.78f, 1}, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, g);
         g.setShader(new LinearGradient(0, h * 0.45f, 0, h, new int[] {0x00000000, 0x99000000, 0xF2000000},
                 new float[] {0, 0.55f, 1}, Shader.TileMode.CLAMP));
@@ -1872,7 +1876,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         String line = clock ? playingClock : playingTab;
         if (line != null) {
             float cap = clock ? playingClockCap : playingTabCap, gap = cap * 0.6f;
-            float base = clock ? L_QUOTES_BASE * k : (L_TABBAR_TOP + L_TABBAR_H / 2) * k + cap / 2;
+            float base = clock ? L_QUOTES_BASE * k : (tabBarTop() + L_TABBAR_H / 2) * k + cap / 2;
             float x = clock ? MARGIN * k : right - playingTabWidth - gap - NowPlaying.barsWidth(cap);
             NowPlaying.drawBars(c, x, base, cap, text, SystemClock.uptimeMillis() < barsUntil, barRect);
             c.drawText(line, x + NowPlaying.barsWidth(cap) + gap, base, text);
@@ -1890,7 +1894,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             q = quotes = new Quotes(coins, data.prices, text);
         }
         // On the tab row, at the right.
-        float base = clock ? L_QUOTES_BASE * k : (L_TABBAR_TOP + L_TABBAR_H / 2) * k + q.halfCap;
+        float base = clock ? L_QUOTES_BASE * k : (tabBarTop() + L_TABBAR_H / 2) * k + q.halfCap;
         float cap = q.cap, gap = (clock ? 8 : 6) * k, spacing = (clock ? 32 : 24) * k;
         float total = spacing * (n - 1);
         for (int i = 0; i < n; i++) total += q.glyphs[i] + gap + q.widths[i];
@@ -4047,7 +4051,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void layoutLight() {
         if (lTab == null) return;
         // Text tabs; the focus pill extends 26 px past the text (the first tab's text starts at the margin).
-        float pad = 26 * k, tabTop = L_TABBAR_TOP * k, tabBottom = (L_TABBAR_TOP + L_TABBAR_H) * k;
+        float pad = 26 * k, tabTop = tabBarTop() * k, tabBottom = (tabBarTop() + L_TABBAR_H) * k;
         float x = MARGIN * k - pad;
         for (int i = 0; i < 3; i++) {
             float tw = Math.max(lTabOn.measureText(tabs()[i]), lTab.measureText(tabs()[i]));
@@ -4076,11 +4080,23 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     /** The cards side by side: the one at cardIndex wide, the others tall, sliding as `cardOpen` moves. */
+    /** The tabs' row: with the billboard, up beside the round buttons (the photo gets the screen); else under the title. */
+    private float tabBarTop() {
+        return billboard && picksOn() && Prefs.topContent().equals(Prefs.TOP_PICKS) ? BB_TABBAR_TOP : L_TABBAR_TOP;
+    }
+
+    /** The billboard's thumbnails sit just above the dock's glass. */
+    private float bbThumbTop() {
+        float dockTop = platterRect.isEmpty() || !dockFrame ? 815 * k : platterRect.top;
+        return Math.min(660 * k, dockTop - 30 * k - BB_THUMB_H * k);
+    }
+
     private void layoutCards() {
         if (billboard) {   // a row of small landscape thumbnails under the title
             float tw = BB_THUMB_W * k, th = BB_THUMB_H * k, g = BB_THUMB_GAP * k, x = MARGIN * k - cardScroll.value * (tw + g);
             for (int i = 0; i < Recs.MAX_CARDS; i++) {
-                cardRects[i].set(x, BB_THUMB_TOP * k, x + tw, BB_THUMB_TOP * k + th);
+                float top = bbThumbTop();
+                cardRects[i].set(x, top, x + tw, top + th);
                 snap(cardRects[i]);
                 x += tw + g;
             }
@@ -4709,8 +4725,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             lTabOn.setColor(WHITE);
         }
         String hello = picksMode() ? Ui.tr("For You") : Ui.tr("Continue Watching");
-        c.drawText(hello, MARGIN * k - Ui.leftBearing(lTitle, hello), L_TITLE_BASE * k, lTitle);
-        titleRight = MARGIN * k + lTitle.measureText(hello);
+        if (billboard && picksMode()) {
+            titleRight = topRects[2].right;
+        } else {
+            c.drawText(hello, MARGIN * k - Ui.leftBearing(lTitle, hello), L_TITLE_BASE * k, lTitle);
+            titleRight = MARGIN * k + lTitle.measureText(hello);
+        }
         if (!picksMode()) {
             if (continueMode()) drawWatchRow(c);
             if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
@@ -4764,42 +4784,153 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
     }
 
-    private Paint bbTitle, bbMeta, bbButton;
+    private Paint bbTitle, bbMeta, bbButton, bbChip, bbBody;
+    private final RectF logoBox = new RectF();
+    private LinearGradient thumbShade;
+    private float thumbShadeH;
+    private String bbBodyFor;
+    private String[] bbBodyLines = new String[0];
 
-    /** The focused pick's name, large, its genre · runtime · service, and the "Watch" pill (the Netflix billboard). */
+    /**
+     * The focused pick, as Apple TV and Netflix show it: the service it's on, the title's own logo (its name in large
+     * type when TMDB has none), genre · length · year · score, two lines of synopsis and the Watch pill, stacked up from
+     * just above the thumbnails.
+     */
     private void drawBillboardText(Canvas c) {
         if (cards.isEmpty()) return;
         Recs.Pick p = cards.get(Math.min(cardIndex, cards.size() - 1));
         if (bbTitle == null) {
             bbTitle = Ui.text(Ui.displayMedium, 84 * k, WHITE);
             bbTitle.setShadowLayer(24 * k, 0, 3 * k, 0x99000000);
-            bbMeta = Ui.text(Ui.medium, 30 * k, 0xD9FFFFFF);
-            bbMeta.setShadowLayer(16 * k, 0, 2 * k, 0x99000000);
-            bbButton = Ui.text(Ui.medium, 28 * k, INK);
+            bbMeta = Ui.text(Ui.medium, 26 * k, 0xE6FFFFFF);
+            bbMeta.setShadowLayer(14 * k, 0, 2 * k, 0x99000000);
+            bbButton = Ui.text(Ui.medium, 27 * k, INK);
+            bbChip = Ui.text(Ui.semibold, 21 * k, WHITE);
+            bbChip.setLetterSpacing(0.04f);
+            bbChip.setShadowLayer(10 * k, 0, 1 * k, 0x80000000);
+            bbBody = Ui.text(Ui.regular, 25 * k, 0xCCFFFFFF);
+            bbBody.setShadowLayer(14 * k, 0, 2 * k, 0x99000000);
         }
         boolean onPhoto = bbImage != null;   // before the photo is in, the theme's own colours
-        bbTitle.setColor(onPhoto ? WHITE : tone(L_INK, WHITE));
-        bbMeta.setColor(onPhoto ? 0xD9FFFFFF : tone(L_DIM, 0xD9FFFFFF));
-        float x = MARGIN * k, maxW = 1000 * k;
-        String title = p.title == null ? "" : p.title;
-        float size = 84 * k;
-        bbTitle.setTextSize(size);
-        while (bbTitle.measureText(title) > maxW && size > 54 * k) bbTitle.setTextSize(size -= 4 * k);   // long names shrink first
-        fitPaint.set(bbTitle);
-        c.drawText(TextUtils.ellipsize(title, fitPaint, maxW, TextUtils.TruncateAt.END).toString(), x - Ui.leftBearing(bbTitle, title), BB_TITLE_BASE * k, bbTitle);
-        if (p.meta != null && !p.meta.isEmpty()) {
-            fitPaint.set(bbMeta);
-            c.drawText(TextUtils.ellipsize(p.meta, fitPaint, maxW, TextUtils.TruncateAt.END).toString(), x, (BB_TITLE_BASE + 56) * k, bbMeta);
+        int ink = onPhoto ? WHITE : tone(L_INK, WHITE);
+        bbTitle.setColor(ink);
+        bbMeta.setColor(onPhoto ? 0xE6FFFFFF : tone(L_DIM, 0xE6FFFFFF));
+        bbBody.setColor(onPhoto ? 0xC7FFFFFF : tone(L_DIM, 0xC7FFFFFF));
+        bbChip.setColor(ink);
+        float x = MARGIN * k, maxW = 860 * k;
+
+        // From the bottom up: the pill, the synopsis, the meta line, the logo (or title), the service.
+        float bh = 62 * k, pillTop = bbThumbTop() - 48 * k - bh;
+        if (!(p.overview == null ? "" : p.overview).equals(bbBodyFor)) {
+            bbBodyFor = p.overview == null ? "" : p.overview;
+            bbBodyLines = wrap(bbBodyFor, bbBody, 820 * k, 2);
         }
-        String label = "▶  " + (p.pkg != null ? Ui.trf("Watch on {app}", "app", Recs.serviceName(p)) : Ui.tr("Watch"));
-        float tw = bbButton.measureText(label), bh = 64 * k, top = (BB_TITLE_BASE + 86) * k;
+        float line = 36 * k, bodyBase = pillTop - 34 * k - (bbBodyLines.length - 1) * line;
+        float metaBase = bbBodyLines.length > 0 ? bodyBase - 50 * k : pillTop - 34 * k;
+        String meta = billboardMeta(p);
+        float titleBottom = metaBase - 46 * k;
+
+        Bitmap logo = recs.logo(p);
+        float nameTop;
+        if (logo != null && logo.getWidth() > 0) {
+            float lw = 560 * k, lh = 136 * k, sc = Math.min(lw / logo.getWidth(), lh / logo.getHeight());
+            float dw = logo.getWidth() * sc, dh = logo.getHeight() * sc;
+            logoBox.set(x, titleBottom - dh, x + dw, titleBottom);
+            imagePaint.setAlpha(255);
+            imagePaint.setColorFilter(null);
+            c.drawBitmap(logo, null, logoBox, imagePaint);
+            nameTop = logoBox.top;
+        } else {
+            String title = p.title == null ? "" : p.title;
+            float size = 80 * k;
+            bbTitle.setTextSize(size);
+            while (bbTitle.measureText(title) > maxW && size > 52 * k) bbTitle.setTextSize(size -= 4 * k);   // long names shrink first
+            c.drawText(fit(title, bbTitle, maxW), x - Ui.leftBearing(bbTitle, title), titleBottom - 10 * k, bbTitle);
+            nameTop = titleBottom - 10 * k - Ui.cap(bbTitle);
+        }
+        String service = Recs.serviceName(p);
+        if (service != null && !service.isEmpty()) {   // the service it's on, its brand colour as a small bar
+            int brand = HomeApps.brandColor(p.servicePkg != null ? p.servicePkg : p.pkg);
+            float base = nameTop - 26 * k;
+            fill.setShader(null);
+            fill.setColor(brand != 0 ? brand : 0xFFFFFFFF);
+            cell.set(x, base - Ui.cap(bbChip), x + 5 * k, base);
+            c.drawRoundRect(cell, 2.5f * k, 2.5f * k, fill);
+            String label = p.tag != null ? p.tag : Ui.trf("On {app}", "app", service);
+            c.drawText(label, x + 16 * k, base, bbChip);
+        }
+        if (!meta.isEmpty()) c.drawText(fit(meta, bbMeta, maxW), x, metaBase, bbMeta);
+        for (int i = 0; i < bbBodyLines.length; i++) c.drawText(bbBodyLines[i], x, bodyBase + i * line, bbBody);
+
+        String label = "▶   " + (p.pkg != null ? Ui.trf("Watch on {app}", "app", service) : Ui.tr("Watch"));
+        float tw = bbButton.measureText(label);
         boolean focused = zone == Z_CARDS;
-        cell.set(x, top, x + tw + 56 * k, top + bh);
+        cell.set(x, pillTop, x + tw + 60 * k, pillTop + bh);
+        if (focused) {
+            tmp.set(cell);
+            tmp.offset(0, 8 * k);
+            shadow.setColor(0x66000000);
+            shadows.draw(c, tmp, bh / 2, SHADOW_BLUR * k, shadow);
+        }
         fill.setShader(null);
-        fill.setColor(focused ? 0xFFFFFFFF : 0x4DFFFFFF);
+        fill.setColor(focused ? 0xFFFFFFFF : 0x40FFFFFF);
         c.drawRoundRect(cell, bh / 2, bh / 2, fill);
+        if (!focused) {
+            rim.setShader(null);
+            rim.setColor(0x4DFFFFFF);
+            rim.setStrokeWidth(1.5f * k);
+            c.drawRoundRect(cell, bh / 2, bh / 2, rim);
+            rim.setStrokeWidth(2.5f * k);
+        }
         bbButton.setColor(focused ? INK : WHITE);
-        c.drawText(label, x + 28 * k, cell.centerY() + Ui.halfCap(bbButton), bbButton);
+        c.drawText(label, x + 30 * k, cell.centerY() + Ui.halfCap(bbButton), bbButton);
+    }
+
+    /** Genre · length · service (Recs' meta, minus the service, which the line above names) · year · ★ score. */
+    private static String billboardMeta(Recs.Pick p) {
+        List<String> parts = new ArrayList<>();
+        String service = Recs.serviceName(p);
+        if (p.meta != null) for (String part : p.meta.split(" · ")) if (!part.isEmpty() && !part.equals(service) && !part.equals(p.tag)) parts.add(part);
+        if (p.year > 0) parts.add(String.valueOf(p.year));
+        if (p.rating >= 1) parts.add(String.format(Ui.locale(), "★ %.1f", p.rating));
+        return String.join("  ·  ", parts);
+    }
+
+    /** `text` cut to fit `max`, with an ellipsis (measured here: TextUtils' own can overrun with some fonts). */
+    private String fit(String text, Paint p, float max) {
+        if (text == null) return "";
+        if (p.measureText(text) <= max) return text;
+        int n = text.length();
+        while (n > 1 && p.measureText(text, 0, n) + p.measureText("…") > max) n--;
+        return text.substring(0, n).trim() + "…";
+    }
+
+    /** Up to `lines` lines of `text` within `width`, the last one ending in an ellipsis when there's more. */
+    private String[] wrap(String text, Paint p, float width, int lines) {
+        if (text == null || text.isEmpty()) return new String[0];
+        List<String> out = new ArrayList<>();
+        String[] words = text.split("\\s+");
+        StringBuilder cur = new StringBuilder();
+        int i = 0;
+        for (; i < words.length && out.size() < lines; i++) {
+            String next = cur.length() == 0 ? words[i] : cur + " " + words[i];
+            if (p.measureText(next) <= width) {
+                cur.setLength(0);
+                cur.append(next);
+            } else {
+                if (cur.length() > 0) out.add(cur.toString());
+                cur.setLength(0);
+                cur.append(words[i]);
+            }
+        }
+        if (out.size() < lines && cur.length() > 0) out.add(cur.toString());
+        if (out.size() > lines) out = out.subList(0, lines);
+        boolean more = i < words.length || out.size() == lines && !String.join(" ", out).equals(text.trim());
+        if (more && !out.isEmpty()) {
+            String last = out.get(out.size() - 1);
+            out.set(out.size() - 1, fit(last + " …", p, width).replaceAll("\\s*…+$", "") + "…");
+        }
+        return out.toArray(new String[0]);
     }
 
     /** A pick as a small landscape thumbnail; the focused one grows and gets a white rim. */
@@ -4825,17 +4956,34 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         // Its name on the image (bottom left, over a short shade), like Netflix's rows.
         if (p != null && p.title != null && (b != null && b.wide != null || poster != null)) {
+            if (thumbShade == null || thumbShadeH != cell.height()) {
+                thumbShadeH = cell.height();
+                thumbShade = new LinearGradient(0, 0, 0, thumbShadeH, new int[] {0x00000000, 0x00000000, 0xB3000000},
+                        new float[] {0, 0.45f, 1}, Shader.TileMode.CLAMP);
+            }
+            c.save();
+            c.translate(0, cell.top);
+            fill.setShader(thumbShade);
+            tmp.set(cell.left, 0, cell.right, cell.height());
+            c.drawRoundRect(tmp, r, r, fill);
+            fill.setShader(null);
+            c.restore();
             if (bbMeta != null) {
                 int a = bbMeta.getColor();
                 bbMeta.setColor(0xF2FFFFFF);   // on the thumbnail's image
                 float ts = bbMeta.getTextSize();
-                bbMeta.setTextSize(24 * k * s);
-                fitPaint.set(bbMeta);
-                c.drawText(TextUtils.ellipsize(p.title, fitPaint, cell.width() - 32 * k, TextUtils.TruncateAt.END).toString(),
-                        cell.left + 16 * k, cell.bottom - 16 * k, bbMeta);
+                bbMeta.setTextSize(19 * k * s);
+                c.drawText(fit(p.title, bbMeta, cell.width() - 28 * k), cell.left + 14 * k, cell.bottom - 13 * k, bbMeta);
                 bbMeta.setTextSize(ts);
                 bbMeta.setColor(a);
             }
+        }
+        if (i == cardIndex && f <= 0.01f) {   // the pick shown above, while the focus is elsewhere: a quiet rim
+            rim.setShader(null);
+            rim.setColor(0x8CFFFFFF);
+            rim.setStrokeWidth(2 * k);
+            c.drawRoundRect(cell, r, r, rim);
+            rim.setStrokeWidth(2.5f * k);
         }
         if (f > 0.01f) {
             rim.setShader(null);
@@ -4948,7 +5096,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // The cards peeking in at the sides show only their image: their text would start off screen.
         if (p == null || base.left < 0 || base.left > (CONTENT_R - 100) * k) return;
         fitPaint.set(lCardTitle);
-        c.drawText(TextUtils.ellipsize(p.title, fitPaint, bw, TextUtils.TruncateAt.END).toString(), base.left, base.bottom + 46 * k, lCardTitle);
+        c.drawText(fit(p.title, lCardTitle, bw - 8 * k), base.left, base.bottom + 46 * k, lCardTitle);
         if (open > 0.02f && p.meta != null && !p.meta.isEmpty()) {
             fitPaint.set(lCardMeta);
             int a = lCardMeta.getAlpha();

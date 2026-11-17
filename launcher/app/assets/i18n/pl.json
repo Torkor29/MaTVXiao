@@ -433,5 +433,6 @@
  "{time} left": "zostało {time}",
  "{url}, code {code}": "{url}, kod {code}",
  "{version} is out: build it again": "Jest wersja {version}: zbuduj ją ponownie",
- "← → to move · OK to drop · Back to cancel": "← → przesuwa · OK upuszcza · Wstecz anuluje"
+ "← → to move · OK to drop · Back to cancel": "← → przesuwa · OK upuszcza · Wstecz anuluje",
+ "On {app}": "W {app}"
 }

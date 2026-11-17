@@ -1,1 +1,1 @@
-Menu de la TV : la grande icône de gauche s'affiche en couleurs pleines. Contient tout MaTV Connect (2.5.0).
+Accueil redessiné, mode Affiche : l'image du titre en plein écran (elle ne s'affichait plus), le logo officiel du film ou de la série, le service, genre · durée · année · note, un résumé, et les vignettes au-dessus du dock. Mode Cartes : les titres ne se chevauchent plus.

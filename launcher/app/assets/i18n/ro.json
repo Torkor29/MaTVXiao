@@ -433,5 +433,6 @@
  "{time} left": "mai sunt {time}",
  "{url}, code {code}": "{url}, cod {code}",
  "{version} is out: build it again": "A apărut {version}: compilează din nou",
- "← → to move · OK to drop · Back to cancel": "← → mută · OK plasează · Înapoi anulează"
+ "← → to move · OK to drop · Back to cancel": "← → mută · OK plasează · Înapoi anulează",
+ "On {app}": "Pe {app}"
 }

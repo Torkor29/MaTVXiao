@@ -56,6 +56,9 @@ final class Recs {
         String tag;             // Trakt: "Up next: S2 E5", "On your watchlist"…, first in the meta; else null
         int mine;               // Trakt: PROGRESS, LIKED (watchlist, recommended) or 0 (TMDB's)
         boolean detailed;
+        String logo = "", overview = "";   // TMDB's title logo (a transparent PNG) and synopsis, in the TV's language
+        int year;
+        double rating;                     // TMDB's audience score out of 10, 0 when too few votes
         java.io.File photo;     // one of your own photos (Photos): no title, no caption
         boolean art;            // Art mode: a museum painting (photo set, with a caption: title, artist · date, museum in app)
     }
@@ -76,7 +79,7 @@ final class Recs {
     /** How often Trakt is asked whether the account changed (marked watched, the watchlist): one small request. */
     private static final long TRAKT_EVERY = 10 * 60_000L;
     /** Bump when what is saved for each title changes (the saved list is discarded and fetched again). */
-    private static final int CACHE_VERSION = 6;   // 6: lists of up to POOL + TRAKT_MAX
+    private static final int CACHE_VERSION = 7;   // 7: title logos, synopsis, year and score
     /** TMDB's titles in the list (trending, then the new releases), as on main. */
     private static final int POOL = 24;
     /** Trakt's titles in the list: about what the tabs show of them (now(): up to 2 in 5 in progress, 3 in 5 liked). */
@@ -860,8 +863,83 @@ final class Recs {
             p.link = "stremio:///detail/" + (p.kind.equals("movie") ? "movie" : "series") + "/" + imdb;
         }
         p.meta = String.join(" · ", parts);
+        p.overview = o.optString("overview", "").trim();
+        String date = o.optString(p.kind.equals("movie") ? "release_date" : "first_air_date", "");
+        p.year = date.length() >= 4 && Character.isDigit(date.charAt(0)) ? Integer.parseInt(date.substring(0, 4)) : 0;
+        p.rating = o.optInt("vote_count") >= 40 ? o.optDouble("vote_average", 0) : 0;
+        String logo = bestLogo(o.optJSONObject("images"));
+        p.logo = logo == null ? "" : logo;
         p.detailed = true;
     }
+
+    /** The title's logo (Netflix's and Apple TV's billboards show it instead of plain text): the TV's language, then English, then none. */
+    private static String bestLogo(JSONObject images) {
+        JSONArray logos = images == null ? null : images.optJSONArray("logos");
+        if (logos == null) return null;
+        String lang = Ui.language.replaceAll("-.*", ""), best = null;
+        double bestScore = -1;
+        for (int i = 0; i < logos.length(); i++) {
+            JSONObject l = logos.optJSONObject(i);
+            if (l == null) continue;
+            String path = l.optString("file_path", ""), iso = l.optString("iso_639_1", "null");
+            if (!path.endsWith(".png")) continue;   // an SVG can't be drawn; a JPEG has no transparency
+            double ratio = l.optDouble("aspect_ratio", 1);
+            double score = (iso.equals(lang) ? 3000 : iso.equals("en") ? 2000 : iso.equals("null") ? 1000 : -1);
+            if (score < 0 || ratio < 1.2) continue;   // a square logo reads badly as a title
+            score += l.optDouble("vote_average", 0) * 10 + Math.min(l.optInt("width"), 1000) / 100.0;
+            if (score > bestScore) { bestScore = score; best = path; }
+        }
+        return best;
+    }
+
+    // MARK: - Title logos (loaded once, kept in memory and on disk)
+
+    private final java.util.Map<String, android.graphics.Bitmap> logos = new java.util.HashMap<>();
+    private final Set<String> logosLoading = new HashSet<>();
+
+    /** The pick's title logo, or null (then it starts loading it, and tells the listeners when it's in). */
+    android.graphics.Bitmap logo(Pick p) {
+        if (p == null || p.logo == null || p.logo.isEmpty()) return null;
+        final String path = p.logo;
+        synchronized (logos) {
+            if (logos.containsKey(path)) return logos.get(path);
+            if (!logosLoading.add(path)) return null;
+        }
+        final File f = new File(new File(context.getCacheDir(), "recs"), "logo" + path.replace("/", ""));
+        logoLoader.execute(() -> {
+            android.graphics.Bitmap b = null;
+            try {
+                if (!f.exists()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    f.getParentFile().mkdirs();
+                    HttpURLConnection c = (HttpURLConnection) new URL("https://image.tmdb.org/t/p/w500" + path).openConnection();
+                    c.setConnectTimeout(10_000);
+                    c.setReadTimeout(20_000);
+                    File part = new File(f.getPath() + ".part");
+                    try (java.io.InputStream in = c.getInputStream(); java.io.OutputStream out = new java.io.FileOutputStream(part)) {
+                        byte[] buf = new byte[16384];
+                        for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                    } finally {
+                        c.disconnect();
+                    }
+                    //noinspection ResultOfMethodCallIgnored
+                    part.renameTo(f);
+                }
+                b = android.graphics.BitmapFactory.decodeFile(f.getPath());
+            } catch (Exception | OutOfMemoryError e) {
+                AppLog.w("logo: " + e.getMessage());
+            }
+            final android.graphics.Bitmap ready = b;
+            synchronized (logos) {
+                logos.put(path, ready);   // null too: a logo that failed isn't asked again this run
+                logosLoading.remove(path);
+            }
+            if (ready != null) main.post(this::notifyListeners);
+        });
+        return null;
+    }
+
+    private final ExecutorService logoLoader = Executors.newSingleThreadExecutor();
 
     /**
      * Without a title in the TV's language TMDB answers with the original one, so a Korean series on a German TV reads
@@ -1279,7 +1357,8 @@ final class Recs {
                         .put("poster", p.poster == null ? "" : p.poster).put("link", p.link == null ? "" : p.link)
                         .put("meta", p.meta).put("app", p.app == null ? "" : p.app).put("pkg", p.pkg == null ? "" : p.pkg)
                         .put("servicePkg", p.servicePkg == null ? "" : p.servicePkg)
-                        .put("tag", p.tag == null ? "" : p.tag).put("mine", p.mine).put("detailed", p.detailed));
+                        .put("tag", p.tag == null ? "" : p.tag).put("mine", p.mine).put("detailed", p.detailed)
+                        .put("logo", p.logo).put("overview", p.overview).put("year", p.year).put("rating", p.rating));
             }
             SharedPreferences.Editor e = cache.edit().putString("picks", a.toString()).putInt("period", period).putLong("listAt", listAt)
                     .putString("traktActivity", traktActivity).putLong("traktStamp", traktStamp)
@@ -1313,6 +1392,10 @@ final class Recs {
             p.tag = o.optString("tag").isEmpty() ? null : o.optString("tag");
             p.mine = o.optInt("mine");
             p.detailed = o.optBoolean("detailed");
+            p.logo = o.optString("logo");
+            p.overview = o.optString("overview");
+            p.year = o.optInt("year");
+            p.rating = o.optDouble("rating", 0);
             out.add(p);
         }
         return out;

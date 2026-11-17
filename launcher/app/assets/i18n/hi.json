@@ -433,5 +433,6 @@
  "{time} left": "{time} बाकी",
  "{url}, code {code}": "{url}, कोड {code}",
  "{version} is out: build it again": "{version} आ गया है: इसे फिर से बनाएँ",
- "← → to move · OK to drop · Back to cancel": "← → खिसकाएँ · OK छोड़ें · वापस रद्द करें"
+ "← → to move · OK to drop · Back to cancel": "← → खिसकाएँ · OK छोड़ें · वापस रद्द करें",
+ "On {app}": "{app} पर"
 }

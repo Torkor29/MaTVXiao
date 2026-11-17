@@ -433,5 +433,6 @@
  "{time} left": "còn {time}",
  "{url}, code {code}": "{url}, mã {code}",
  "{version} is out: build it again": "Đã có {version}: hãy build lại",
- "← → to move · OK to drop · Back to cancel": "← → di chuyển · OK đặt · Quay lại hủy"
+ "← → to move · OK to drop · Back to cancel": "← → di chuyển · OK đặt · Quay lại hủy",
+ "On {app}": "Trên {app}"
 }

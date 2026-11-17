@@ -433,5 +433,6 @@
  "{time} left": "осталось {time}",
  "{url}, code {code}": "{url}, код {code}",
  "{version} is out: build it again": "Вышла {version}: соберите заново",
- "← → to move · OK to drop · Back to cancel": "← → — переместить · OK — оставить · Назад — отмена"
+ "← → to move · OK to drop · Back to cancel": "← → — переместить · OK — оставить · Назад — отмена",
+ "On {app}": "В {app}"
 }

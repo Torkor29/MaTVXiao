@@ -433,5 +433,6 @@
  "{time} left": "залишилось {time}",
  "{url}, code {code}": "{url}, код {code}",
  "{version} is out: build it again": "Вийшла {version}: зберіть знову",
- "← → to move · OK to drop · Back to cancel": "← → перемістити · OK розмістити · Назад скасувати"
+ "← → to move · OK to drop · Back to cancel": "← → перемістити · OK розмістити · Назад скасувати",
+ "On {app}": "У {app}"
 }
