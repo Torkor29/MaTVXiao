@@ -214,7 +214,7 @@ struct AdbKeys {
     private static let service = "io.matv.app.adb"
 
     static func load() throws -> AdbKeys {
-        if let data = keychainData(), let key = SecKeyCreateWithData(data as CFData, [
+        if let data = keychainData() ?? (try? Data(contentsOf: fileURL)), let key = SecKeyCreateWithData(data as CFData, [
             kSecAttrKeyType: kSecAttrKeyTypeRSA, kSecAttrKeyClass: kSecAttrKeyClassPrivate,
         ] as CFDictionary, nil), let pub = SecKeyCopyPublicKey(key) {
             return AdbKeys(privateKey: key, publicKey: pub)
@@ -230,8 +230,16 @@ struct AdbKeys {
         var add = query
         add[kSecValueData] = data
         add[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(add as CFDictionary, nil)
+        if SecItemAdd(add as CFDictionary, nil) != errSecSuccess {
+            // No Keychain (an unsigned build): the app's private files, so the TV still knows this phone next time.
+            try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        }
         return AdbKeys(privateKey: key, publicKey: pub)
+    }
+
+    private static var fileURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("adbkey")
     }
 
     private static func keychainData() -> Data? {
