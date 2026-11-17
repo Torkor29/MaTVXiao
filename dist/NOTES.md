@@ -1,1 +1,1 @@
-MaTV Connect : gère la TV depuis ton téléphone (Réglages › Téléphone, QR code). Bibliothèque de ~1 400 fonds 4K à envoyer sur la TV, import de tes photos avec recadrage, collections, télécommande et applis. Menu de la TV redessiné : fond flouté, panneau en verre, icônes en couleur.
+Menu de la TV : la grande icône de gauche s'affiche en couleurs pleines. Contient tout MaTV Connect (2.5.0).

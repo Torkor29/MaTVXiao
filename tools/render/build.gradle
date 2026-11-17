@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' version '8.7.3' }
+def L = '/home/claude/matv/launcher'
+android {
+    namespace 'io.freemytv'
+    compileSdk 34
+    defaultConfig { applicationId 'io.freemytv'; minSdk 26; targetSdk 33 }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    sourceSets.main {
+        manifest.srcFile "$L/app/AndroidManifest.xml"
+        java.srcDirs = ["$L/app/src", 'gen']
+        res.srcDirs = ["$L/app/res", "$L/out/res"]
+        assets.srcDirs = ["$L/app/assets"]
+    }
+    testOptions.unitTests { includeAndroidResources = true; all { maxHeapSize = '3g'; systemProperty 'robolectric.graphicsMode', 'NATIVE'; systemProperty 'shots', "$rootDir/shots" } }
+    lint { abortOnError false; checkReleaseBuilds false }
+    aaptOptions { noCompress 'ttf' }
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}

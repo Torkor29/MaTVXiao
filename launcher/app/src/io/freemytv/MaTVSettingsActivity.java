@@ -1291,6 +1291,7 @@ public class MaTVSettingsActivity extends Activity {
             c.drawRoundRect(box, rad, rad, tile);
             tile.setMaskFilter(null);
             box.set(inset, inset, w - inset, h - inset);
+            tile.setColor(0xFFFFFFFF);   // opaque again after the shadow's colour: the shader takes the paint's alpha
             tile.setShader(new android.graphics.LinearGradient(0, box.top, 0, box.bottom, blend(base, 0xFFFFFFFF, 0.28f),
                     blend(base, 0xFF000000, 0.12f), android.graphics.Shader.TileMode.CLAMP));
             c.drawRoundRect(box, rad, rad, tile);
