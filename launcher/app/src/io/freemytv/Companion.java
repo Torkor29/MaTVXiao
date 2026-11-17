@@ -489,7 +489,7 @@ final class Companion {
     static {
         String[] k = {"up", "19", "down", "20", "left", "21", "right", "22", "ok", "23", "back", "4", "home", "3",
                 "menu", "82", "play", "85", "volup", "24", "voldown", "25", "mute", "164", "rewind", "89", "forward", "90",
-                "settings", "176", "info", "165", "chup", "166", "chdown", "167", "search", "84", "del", "67", "enter", "66"};
+                "settings", "176", "info", "165", "power", "26", "wake", "224", "sleep", "223", "chup", "166", "chdown", "167", "search", "84", "del", "67", "enter", "66"};
         for (int i = 0; i < k.length; i += 2) KEYS.put(k[i], Integer.parseInt(k[i + 1]));
     }
 
@@ -553,7 +553,11 @@ final class Companion {
         Intent i = HomeApps.launchIntent(app.getPackageManager(), pkg);
         if (i == null) throw new HttpError("404 Not Found", "Appli introuvable");
         ComponentName cn = i.getComponent();
-        if (cn != null && adbRun("am start -n " + cn.flattenToShortString() + " -f 0x10200000")) return;
+        // As the home screen opens it: MAIN with the launcher's category. Without them some apps (Canal+) see a
+        // stranger's intent, show their splash and close.
+        StringBuilder cmd = new StringBuilder("am start -a android.intent.action.MAIN");
+        if (i.getCategories() != null) for (String cat : i.getCategories()) cmd.append(" -c ").append(cat);
+        if (cn != null && adbRun(cmd.append(" -n ").append(cn.flattenToShortString()).append(" -f 0x10200000").toString())) return;
         app.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 

@@ -124,6 +124,7 @@ button.row{width:100%;text-align:left;color:inherit}
 /* Chips (collections) */
 .chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;margin:0 -18px;padding-left:18px;padding-right:18px}
 .chips::-webkit-scrollbar{display:none}
+.chips.ideas{flex-wrap:wrap;overflow:visible;margin:0 0 6px;padding:2px 0 6px}
 @media (min-width:980px){.chips{margin:0;padding-left:2px;flex-wrap:wrap}}
 .group .chips{flex-wrap:wrap;margin:0;padding:2px 0 4px}
 .chip{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);font-size:14px;font-weight:560;color:var(--ink2);white-space:nowrap;transition:background .2s,color .2s}
@@ -131,16 +132,17 @@ button.row{width:100%;text-align:left;color:inherit}
 .chip em{font-style:normal;opacity:.6;font-weight:500}
 
 /* Themes: big cover rail */
-.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,62%);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -18px;padding:4px 18px 10px}
+.rail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:4px 0 10px}
 .rail::-webkit-scrollbar{display:none}
-@media (min-width:700px){.rail{grid-auto-columns:300px}}
-.theme{position:relative;scroll-snap-align:start;aspect-ratio:4/3;border-radius:20px;overflow:hidden;text-align:left;background:#111}
+@media (min-width:700px){.rail{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.theme{position:relative;aspect-ratio:16/10;border-radius:20px;overflow:hidden;text-align:left;background:#111}
+.remote .power{align-self:center;margin-bottom:6px}
 .theme img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .8s var(--ease)}
 .theme:hover img{transform:scale(1.04)}
 .theme::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.7))}
-.theme .name{position:absolute;left:16px;bottom:14px;z-index:1}
-.theme .name b{display:block;font:italic 400 30px/1 var(--placard)}
-.theme .name span{font-size:13px;color:rgba(255,255,255,.8)}
+.theme .name{position:absolute;left:12px;right:10px;bottom:10px;z-index:1}
+.theme .name b{display:block;font:italic 400 22px/1.05 var(--placard)}
+.theme .name span{font-size:12px;color:rgba(255,255,255,.8)}
 .theme[aria-pressed="true"]{box-shadow:0 0 0 2px var(--light)}
 
 /* Picture grid */
@@ -279,6 +281,7 @@ const COMMONS = "https://commons.wikimedia.org/w/api.php";
 
 /* ---------- Icons (drawn for this app, 24px grid) ---------- */
 const I = {
+  power:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>',
   tv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20h8M12 16.5V20"/></svg>',
   discover:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5.5-7 4 5 2.5-3 6 5"/><circle cx="16.5" cy="7.5" r="2"/><rect x="2.5" y="3.5" width="19" height="17" rx="3"/></svg>',
   library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg>',
@@ -597,7 +600,8 @@ function viewDiscover() {
   ${S.search ? "" : `<div class="rail" role="list">${themes.map(t => `<button class="theme" role="listitem" data-theme="${esc(t.id)}" aria-pressed="${t.id === S.theme}">
       <img loading="lazy" src="${esc((t.items[t.cover || 0] || t.items[0] || {}).th || "")}" alt="">
       <span class="name"><b>${esc(t.name)}</b><span>${fmt(t.items.length)} images</span></span></button>`).join("")}</div>`}
-  <h2>${S.search ? `« ${esc(S.search.q)} »` : esc((themes.find(t => t.id === S.theme) || {}).name || "")} <small>${S.searching ? "Recherche…" : S.search && S.search.failed ? "" : fmt(list.length) + " images"}</small></h2>
+  ${S.search ? "" : `<h2>Plus d'idées</h2><div class="chips ideas">${IDEAS.map(([fr], n) => `<button class="chip" data-idea="${n}">${esc(fr)}</button>`).join("")}</div>`}
+  <h2>${S.search ? `« ${esc(S.search.label || S.search.q)} »` : esc((themes.find(t => t.id === S.theme) || {}).name || "")} <small>${S.searching ? "Recherche…" : S.search && S.search.failed ? "" : fmt(list.length) + " images"}</small></h2>
   ${!S.index ? `<p class="note">Chargement de la bibliothèque…</p>` : list.length ? `<div class="grid">${tiles}</div>` : `<p class="note">${S.searching ? "Recherche…" : S.search && S.search.failed ? "Wikimedia ne répond pas pour l'instant. Réessaie dans un moment, ou choisis un thème." : "Aucune image en paysage assez grande pour cette recherche. Essaie un autre mot, en anglais par exemple."}</p>`}
   ${list.length > S.shown ? `<div class="more"><button class="btn" data-act="more">Voir plus</button></div>` : ""}
   <p class="credit">Images de <a href="https://commons.wikimedia.org" target="_blank" rel="noreferrer">Wikimedia Commons</a>, sous licence libre. L'auteur et la licence restent avec chaque image.</p>`;
@@ -609,9 +613,15 @@ after.discover = () => {
   if (sel) sel.scrollIntoView({inline: "nearest", block: "nearest"});
 };
 
-async function searchCommons(q) {
+/* Ideas beyond the themes: searches on Wikimedia Commons (in English, which it knows best). */
+const IDEAS = [["Aurores boréales", "aurora borealis"], ["Automne", "autumn forest"], ["Hiver", "winter snow landscape"], ["Déserts", "desert dunes"],
+  ["Fleurs", "flower field"], ["Lavande", "lavender field"], ["Animaux", "wildlife"], ["Oiseaux", "bird in flight"], ["Phares", "lighthouse"],
+  ["Îles", "tropical island"], ["Nuit étoilée", "milky way night sky"], ["Châteaux", "castle"], ["Architecture", "architecture"],
+  ["Tableaux de maîtres", "painting landscape museum"], ["Venise", "Venice"], ["Islande", "Iceland landscape"], ["Alpes", "Alps"], ["Toscane", "Tuscany"]];
+
+async function searchCommons(q, label) {
   if (!q) { S.search = null; return render(); }
-  S.search = {q, items: []}; S.searching = true; S.shown = 36; render();
+  S.search = {q, label, items: []}; S.searching = true; S.shown = 36; render();
   const p = new URLSearchParams({action: "query", format: "json", origin: "*", generator: "search", gsrsearch: q + " filetype:bitmap",
     gsrnamespace: "6", gsrlimit: "120", prop: "imageinfo", iiprop: "url|size|mime|extmetadata", iiurlwidth: "960",
     iiextmetadatafilter: "ObjectName|Artist|LicenseShortName"});
@@ -692,6 +702,7 @@ function viewLibrary() {
   <div class="toolbar">
     <button class="btn primary small" data-act="import">${I.upload}Importer</button>
     <button class="btn small" data-act="select">${S.selecting ? "Terminé" : "Sélectionner"}</button>
+    <button class="btn small" data-act="newcol">${I.plus.replace('<svg', '<svg width="16" height="16"')}Collection</button>
   </div>
   <div class="chips">${[{id: "all", name: "Toutes"}, ...cols()].map(c => `<button class="chip" data-filter="${esc(c.id)}" aria-pressed="${S.filter === c.id}">${esc(c.name)} <em>${fmt(c.id === "all" ? items().length : counts[c.id] || 0)}</em></button>`).join("")}<button class="chip" data-act="newcol" aria-label="Nouvelle collection">${I.plus.replace('<svg', '<svg width="16" height="16"')}Collection</button></div>
   ${S.filter !== "all" ? `<p style="margin:4px 0 14px;display:flex;gap:8px"><button class="btn small" data-act="rencol">Renommer</button><button class="btn small danger" data-act="delcol">Supprimer la collection</button></p>` : `<div style="height:14px"></div>`}
@@ -834,6 +845,7 @@ function viewRemote() {
   <h1 class="large">Télécommande</h1>
   <p class="sub">Glisse sur le pavé pour te déplacer, touche-le pour valider.</p>
   <div class="remote">
+    <button class="btn small power" data-key="power" aria-label="Allumer ou mettre en veille la TV">${I.power}Allumer / Veille</button>
     <div class="pad" id="pad" role="application" aria-label="Pavé tactile">
       <div class="ring"></div>
       <button class="arrow up" data-key="up" aria-label="Haut">${I.up}</button>
@@ -894,6 +906,20 @@ function openSheet(html, wire) {
   requestAnimationFrame(() => sh.classList.add("on"));
   wire && wire(sh);
 }
+/** A name to type (a collection's): a sheet with a field, not the browser's prompt. */
+function askName(title, value, action, done) {
+  openSheet(`<h2 style="margin-top:4px">${esc(title)}</h2>
+    <label class="search" style="margin:14px 0 16px"><input id="nm" maxlength="40" placeholder="Ex. : Montagnes, Vacances 2025…" value="${esc(value)}" enterkeyhint="done" autocomplete="off"></label>
+    <button class="btn primary" id="nmok" style="width:100%">${esc(action)}</button>`, sh => {
+    const f = $("#nm", sh), go = async () => {
+      const name = f.value.trim(); if (!name) return f.focus();
+      try { await done(name); closeSheet(); } catch (x) { toast(x.message, true); }
+    };
+    $("#nmok", sh).onclick = go;
+    f.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    setTimeout(() => f.focus(), 350);
+  });
+}
 function closeSheet() { $("#sheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
 $("#scrim").onclick = closeSheet;
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
@@ -916,6 +942,7 @@ async function onClick(e) {
   }
   if (d.pick !== undefined) return sheetPick(themeItems()[+d.pick]);
   if (d.theme) { S.theme = d.theme; S.shown = 36; return render(); }
+  if (d.idea) { const [fr, en] = IDEAS[+d.idea]; window.scrollTo(0, 0); return searchCommons(en, fr); }
   if (d.filter) { S.filter = d.filter; return render(); }
   if (d.app) { buzz(); return api("/api/launch", {json: {pkg: d.app}}).then(() => toast("Ouvert sur la TV")).catch(x => toast(x.message, true)); }
   if (d.wall) {
@@ -934,16 +961,14 @@ async function onClick(e) {
     case "clear": S.search = null; return render();
     case "send": return sendText();
     case "select": S.selecting = !S.selecting; S.selected.clear(); return render();
-    case "newcol": {
-      const name = prompt("Nom de la nouvelle collection"); if (!name) return;
-      try { const r = await api("/api/collections", {json: {action: "create", name}}); await loadLib(); S.filter = r.id; render(); toast("Collection créée"); } catch (x) { toast(x.message, true); }
-      return;
-    }
-    case "rencol": {
-      const name = prompt("Nouveau nom", colName(S.filter)); if (!name) return;
-      try { await api("/api/collections", {json: {action: "rename", id: S.filter, name}}); await loadLib(); render(); } catch (x) { toast(x.message, true); }
-      return;
-    }
+    case "newcol":
+      return askName("Nouvelle collection", "", "Créer", async name => {
+        const r = await api("/api/collections", {json: {action: "create", name}}); await loadLib(); S.filter = r.id; render(); toast("Collection créée");
+      });
+    case "rencol":
+      return askName("Renommer la collection", colName(S.filter), "Renommer", async name => {
+        await api("/api/collections", {json: {action: "rename", id: S.filter, name}}); await loadLib(); render(); toast("Collection renommée");
+      });
     case "delcol": {
       const n = items().filter(w => w.collection === S.filter).length;
       const withItems = n > 0 && confirm(`Supprimer aussi ses ${n} fonds ?\nOK : les supprimer. Annuler : les garder dans une autre collection.`);

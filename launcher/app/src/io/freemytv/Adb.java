@@ -183,6 +183,50 @@ final class Adb implements Closeable {
         }
     }
 
+    /**
+     * Installs an APK through the TV's own ADB (`cmd package install -S`, the file streamed in): the way a computer's
+     * `adb install` does it, with no installer screen. Returns the TV's answer ("Success", or why not). Updating this
+     * very app ends its process once the new version is in, so the answer may never come back.
+     */
+    String install(java.io.InputStream apk, long size) throws IOException {
+        int old = socket.getSoTimeout();
+        socket.setSoTimeout(240_000);   // Play Protect may look at it first
+        try {
+            int local = nextLocalId++;
+            send(OPEN, local, 0, ("exec:cmd package install -r -S " + size + "\0").getBytes(StandardCharsets.UTF_8));
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            int remote = 0;
+            while (remote == 0) {
+                Message m = read();
+                if (m.arg1 != local) continue;
+                if (m.command == OKAY) remote = m.arg0;
+                else if (m.command == CLSE) throw new IOException(Ui.tr("ADB refused the command"));
+            }
+            byte[] buffer = new byte[4096];   // the size every adbd takes
+            for (long sent = 0; sent < size; ) {
+                int n = apk.read(buffer, 0, (int) Math.min(buffer.length, size - sent));
+                if (n < 0) throw new IOException("APK incomplet");
+                send(WRTE, local, remote, java.util.Arrays.copyOf(buffer, n));
+                sent += n;
+                for (boolean acked = false; !acked; ) {   // one write at a time
+                    Message m = read();
+                    if (m.arg1 != local) continue;
+                    if (m.command == OKAY) acked = true;
+                    else if (m.command == WRTE) { result.write(m.data); send(OKAY, local, remote, null); }
+                    else if (m.command == CLSE) { send(CLSE, local, remote, null); return result.toString("UTF-8"); }
+                }
+            }
+            while (true) {
+                Message m = read();
+                if (m.arg1 != local) continue;
+                if (m.command == WRTE) { result.write(m.data); send(OKAY, local, remote, null); }
+                else if (m.command == CLSE) { send(CLSE, local, remote, null); return result.toString("UTF-8"); }
+            }
+        } finally {
+            socket.setSoTimeout(old);
+        }
+    }
+
     @Override public void close() {
         try { socket.close(); } catch (IOException ignored) {}
     }

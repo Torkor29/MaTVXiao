@@ -394,6 +394,7 @@ final class Updates {
             check(c);
             return;
         }
+        if (installByAdb(c, apk, version)) return;
         PackageInstaller installer = c.getPackageManager().getPackageInstaller();
         try {
             // One at a time: a session an earlier OK left waiting (its question closed unanswered) goes.
@@ -418,6 +419,25 @@ final class Updates {
         } catch (Exception e) {
             AppLog.w("update install: " + e);
             set(c, FAILED, version, OTHER);
+        }
+    }
+
+    /**
+     * Through the TV's own ADB first (allowed once for the home screen switch): no installer screen, and no "unknown
+     * apps" question, which some TVs (Xiaomi) keep asking even once allowed. False when ADB isn't there: Android's
+     * installer then.
+     */
+    private static boolean installByAdb(Context c, File apk, String version) {
+        try (Adb adb = Adb.connect(c, 3_000, null); InputStream in = new FileInputStream(apk)) {
+            AppLog.w("update: installing " + version + " through ADB");
+            String answer = adb.install(in, apk.length()).trim();
+            if (answer.contains("Success")) return true;
+            AppLog.w("update: ADB install: " + answer);
+            return false;
+        } catch (IOException | RuntimeException e) {
+            // Updating ourselves: the process may end mid-answer, once the new version is in.
+            AppLog.w("update: ADB install: " + e.getMessage());
+            return false;
         }
     }
 

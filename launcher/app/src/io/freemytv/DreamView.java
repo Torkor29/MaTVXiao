@@ -193,6 +193,7 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         startedAt = clock();
         lastFrame = 0;
         failed.clear();
+        artList = null;   // read again now: the phone's chosen wallpaper (Art.showFirst) goes first
         fallback = photos().isEmpty();
         data.addListener(this);
         recs.addListener(this);
@@ -200,7 +201,6 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         recs.refreshIfStale();
         recs.prefetchAll();
         Photos.importInbox(getContext(), () -> { if (running) prepareNext(); });
-        artList = null;
         Art.refreshIfStale(getContext(), () -> {
             if (!running) return;
             // A new painting: the list is read again, and the first ones replace the picks or the clock.
@@ -303,13 +303,17 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
     /** The phone's Show on the TV: the wallpapers, whatever the screensaver is set to. */
     boolean wallpapersOnly;
     private int artVersion = -1;
+    /** The list starts with the wallpaper the phone picked: show it next, not the one after the current slide. */
+    private boolean fromTop;
 
     /** Art mode's paintings when it is on and some are ready, else your photos when they are on, otherwise the picks'. */
     private List<Recs.Pick> photos() {
         if (wallpapersOnly || Art.on()) {   // Art mode is paintings only: until the first ones are ready, the clock over the aurora
             if (artList == null || artList.isEmpty() || artVersion != Art.version) {
                 artVersion = Art.version;
+                String wanted = Art.showFirst;
                 artList = Art.picks(getContext());
+                fromTop = wanted != null && !artList.isEmpty();
             }
             return artList;
         }
@@ -323,7 +327,9 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         if (list.isEmpty()) return;
         Slide last = incoming != null ? incoming : current;
         int start = 0;
-        if (last != null) {
+        if (fromTop) {
+            fromTop = false;
+        } else if (last != null) {
             for (int i = 0; i < list.size(); i++) {
                 if (Recs.key(list.get(i)).equals(Recs.key(last.pick))) {
                     start = i + 1;

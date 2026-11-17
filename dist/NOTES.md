@@ -1,1 +1,6 @@
-Le raccourci MaTV Connect ajouté à l'écran d'accueil de l'iPhone reste connecté à la TV (il redemandait le QR code).
+- Les mises à jour s'installent toutes seules, sans la fenêtre « installation d'applications inconnues » (elles passent par le débogage USB de la TV).
+- Les applis lancées depuis le téléphone ne se ferment plus (Canal+…).
+- « Afficher » montre bien le fond choisi.
+- Télécommande : bouton Allumer / Veille.
+- Mes fonds : créer une collection depuis un vrai champ de saisie ; Découvrir : tous les thèmes visibles, et des idées (aurores, automne, phares…).
+- Suggestions en cartes : le logo du titre sur l'affiche ouverte.

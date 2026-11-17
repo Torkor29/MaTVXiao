@@ -5095,6 +5095,30 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             rim.setAlpha(255);
             c.restore();
         }
+        // Opened on its backdrop, the card wears the title's own logo, bottom left over a soft shade (as the billboard).
+        if (p != null && img != null && open > 0.2f) {
+            float o = Ui.clamp((open - 0.2f) / 0.6f);
+            if (cardShade == null) cardShade = new LinearGradient(0, 0.4f, 0, 1, 0x00000000, 0xB8000000, Shader.TileMode.CLAMP);
+            imageMatrix.setScale(1, cell.height());
+            imageMatrix.postTranslate(0, cell.top);
+            cardShade.setLocalMatrix(imageMatrix);
+            fill.setColor(0xFF000000);
+            fill.setShader(cardShade);
+            fill.setAlpha(Math.round(255 * o));
+            c.drawRoundRect(cell, r, r, fill);
+            fill.setShader(null);
+            fill.setAlpha(255);
+            Bitmap logo = recs.logo(p);
+            if (logo != null && logo.getWidth() > 0 && logo.getHeight() > 0) {
+                float sc = Math.min(cell.width() * 0.42f / logo.getWidth(), cell.height() * 0.3f / logo.getHeight());
+                float dw = logo.getWidth() * sc, dh = logo.getHeight() * sc, pad = 22 * k * s;
+                logoBox.set(cell.left + pad, cell.bottom - pad - dh, cell.left + pad + dw, cell.bottom - pad);
+                imagePaint.setColorFilter(null);
+                imagePaint.setAlpha(Math.round(255 * o));
+                c.drawBitmap(logo, null, logoBox, imagePaint);
+                imagePaint.setAlpha(255);
+            }
+        }
         // The cards peeking in at the sides show only their image: their text would start off screen.
         if (p == null || base.left < 0 || base.left > (CONTENT_R - 100) * k) return;
         fitPaint.set(lCardTitle);
@@ -5121,6 +5145,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
      * The round buttons (Live TV, HDMI Inputs and Settings by default): icon-only glass circles (light by day, smoked at
      * night); the focused one turns white with a dark icon (the tvOS focus) and its name appears below it.
      */
+    /** The shade under an opened card's logo, in a unit box (stretched to the card by its matrix). */
+    private LinearGradient cardShade;
+
     private void drawLightButtons(Canvas c) {
         applyTone();
         drawStatusIcons(c);
