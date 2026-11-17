@@ -66,21 +66,23 @@ jobs:
           xcrun simctl list devices | grep "$ID"
       - name: Tests (a fake TV on this machine) and screenshots
         run: |
-          python3 mobile/fake_tv.py 5555 &
-          sleep 1
           mkdir -p mobile/out
+          FAKE_LOG=$PWD/mobile/out/fake_tv.log python3 mobile/fake_tv.py 15555 &
+          sleep 1
           cd mobile/ios
           set +e
           xcodebuild test -project MaTV.xcodeproj -scheme MaTV -destination "id=$SIM" -resultBundlePath ../out/tests.xcresult \
             CODE_SIGNING_ALLOWED=NO > ../out/xcodebuild.log 2>&1
           code=$?
           grep -E "error:|Test Case .*(passed|failed|skipped)|XCTAssert|Skipped|\*\* (TEST|BUILD)" ../out/xcodebuild.log | head -300
+          echo "--- fake TV"; cat ../out/fake_tv.log || true
           exit $code
       - name: Export the screenshots
         if: always()
         run: |
           mkdir -p mobile/out/shots
           [ -d mobile/out/tests.xcresult ] && xcrun xcresulttool export attachments --path mobile/out/tests.xcresult --output-path mobile/out/shots || true
+          rm -f mobile/out/shots/*.mp4   # the test's screen recording: hundreds of MB
           ls -la mobile/out/shots || true
       - uses: actions/upload-artifact@v4
         if: always()
@@ -89,6 +91,7 @@ jobs:
           path: |
             mobile/out/shots
             mobile/out/xcodebuild.log
+            mobile/out/fake_tv.log
       - name: TestFlight
         if: inputs.upload
         env:

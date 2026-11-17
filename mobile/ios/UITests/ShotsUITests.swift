@@ -11,8 +11,7 @@ final class ShotsUITests: XCTestCase {
             let a = XCTAttachment(screenshot: app.screenshot())
             a.name = shot
             a.lifetime = .keepAlways
-            add(a)
-            app.terminate()
+            add(a)   // the next launch closes this one
         }
     }
 

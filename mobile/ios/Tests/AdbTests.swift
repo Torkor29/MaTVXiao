@@ -5,12 +5,13 @@ import Security
 /// Talks to the fake TV (mobile/fake_tv.py on 127.0.0.1:5555, started by the CI), which checks what a real adbd
 /// checks: the key's format, the RSA signature, one acknowledged write at a time, and every byte of an install.
 final class AdbTests: XCTestCase {
-    private let host = ProcessInfo.processInfo.environment["FAKE_TV"] ?? "127.0.0.1"
+    private let host = "127.0.0.1"
+    private let port: UInt16 = 15555   // the CI's fake TV (5555 can be taken on the Mac runners)
 
     func testConnectInstallAndPair() throws {
-        guard Socket.isOpen(host: host, port: 5555, timeout: 1) else { throw XCTSkip("No fake TV on \(host):5555") }
+        guard Socket.isOpen(host: host, port: port, timeout: 1) else { throw XCTSkip("No fake TV on \(host):\(port)") }
         var prompted = false
-        let adb = try AdbClient.connect(host: host, keyName: "matv@ci", approvalSeconds: 30) { prompted = true }
+        let adb = try AdbClient.connect(host: host, port: port, keyName: "matv@ci", approvalSeconds: 30) { prompted = true }
         XCTAssertEqual(try adb.shell("getprop ro.product.brand").trimmingCharacters(in: .whitespacesAndNewlines), "Xiaomi")
         XCTAssertTrue(try adb.shell("dumpsys package io.freemytv | grep -m1 versionName").contains("versionName=2.7.1"))
 
@@ -28,7 +29,7 @@ final class AdbTests: XCTestCase {
 
         // Known now: the next connection signs in without asking.
         var askedAgain = false
-        let again = try AdbClient.connect(host: host, keyName: "matv@ci", approvalSeconds: 5) { askedAgain = true }
+        let again = try AdbClient.connect(host: host, port: port, keyName: "matv@ci", approvalSeconds: 5) { askedAgain = true }
         XCTAssertFalse(askedAgain)
         again.close()
         print("first connection prompted: \(prompted)")
