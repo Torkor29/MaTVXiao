@@ -384,7 +384,7 @@ async function demoApi(path, opts) {
 }
 const demoImg = id => { const w = D.lib.items.find(x => x.id === id); return w ? w.u : ""; };
 
-function forget() { try { localStorage.removeItem("matv.k"); } catch (e) {} S.token = null; renderPair(); }
+function forget() { try { localStorage.removeItem("matv.k"); } catch (e) {} S.token = null; history.replaceState(null, "", location.pathname); renderPair(); }
 
 /* ---------- Toast ---------- */
 let toastTimer;
@@ -404,8 +404,10 @@ function ambient(url) { if (url) $("#ambient").style.backgroundImage = `url("${u
 /* ---------- Boot ---------- */
 async function boot() {
   if (DEMO) S.token = "demo";
-  const m = DEMO ? null : location.hash.match(/k=([A-Za-z0-9_-]{20,})/);
-  if (m) { try { localStorage.setItem("matv.k", m[1]); } catch (e) {} S.token = m[1]; history.replaceState(null, "", location.pathname); }
+  // The code stays in the address (?k=): an icon added to the iPhone's home screen keeps that address, and gets
+  // storage of its own, apart from Safari's.
+  const m = DEMO ? null : (location.hash.match(/k=([A-Za-z0-9_-]{20,})/) || location.search.match(/k=([A-Za-z0-9_-]{20,})/));
+  if (m) { try { localStorage.setItem("matv.k", m[1]); } catch (e) {} S.token = m[1]; history.replaceState(null, "", location.pathname + "?k=" + m[1]); }
   else if (!DEMO) { try { S.token = localStorage.getItem("matv.k"); } catch (e) {} }
   if (!S.token) return renderPair();
   try {
