@@ -101,6 +101,11 @@ final class Companion {
         writeToken(c, token);
     }
 
+    /** The secret, for PairReceiver (the phone app pairing over ADB). */
+    static String secret(Context c) {
+        return token(c);
+    }
+
     private static synchronized String token(Context c) {
         if (token == null) {
             File f = new File(c.getFilesDir(), "connect.token");

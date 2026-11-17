@@ -19,5 +19,5 @@ jobs:
         run: |
           v="$(tr -d ' \r\n' < dist/VERSION)"
           if gh release view "v$v" >/dev/null 2>&1; then echo "v$v already published"; exit 0; fi
-          gh release create "v$v" dist/MaTV-Home.apk dist/MaTV-Live.apk dist/MaTV-Installer.apk dist/Installer-MaTV.bat install.sh \
+          gh release create "v$v" dist/MaTV-Home.apk dist/MaTV-Live.apk dist/Installer-MaTV.bat install.sh \
             --target "$GITHUB_SHA" --title "MaTV $v" --notes-file dist/NOTES.md

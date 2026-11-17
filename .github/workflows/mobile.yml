@@ -1,0 +1,109 @@
+# The MaTV phone apps (mobile/): builds and tests the Android and iPhone apps on every change, and, when asked
+# (Actions > Mobile apps > Run workflow, "upload"), sends the iPhone app to TestFlight. The secrets it uses are listed
+# in mobile/STORE.md; without them it still builds and tests everything.
+name: Mobile apps
+on:
+  push:
+    branches: [main]
+    paths: ["mobile/**", "launcher/app/assets/connect/**", ".github/workflows/mobile.yml"]
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Envoyer l'app iPhone sur TestFlight"
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - name: Android SDK 36
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Tests (a fake TV on this machine)
+        run: |
+          python3 mobile/fake_tv.py 5555 &
+          sleep 1
+          cd mobile/android && ./gradlew --no-daemon testDebugUnitTest
+      - name: Upload key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE }}
+        if: env.KEYSTORE != ''
+        run: echo "$KEYSTORE" | base64 -d > mobile/android/upload.keystore
+      - name: Build (AAB for Google Play, APK to try)
+        env:
+          MATV_STOREFILE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE != '' && 'upload.keystore' || '' }}
+          MATV_STOREPASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+          MATV_KEYALIAS: ${{ secrets.ANDROID_UPLOAD_ALIAS }}
+          MATV_KEYPASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+        run: cd mobile/android && ./gradlew --no-daemon bundleRelease assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: |
+            mobile/android/app/build/outputs/bundle/release/*.aab
+            mobile/android/app/build/outputs/apk/release/*.apk
+            mobile/android/shots/*.png
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode project
+        run: brew install xcodegen && cd mobile/ios && xcodegen
+      - name: Simulator (the largest iPhone, for the App Store's 6.9" screenshots)
+        run: |
+          xcodebuild -version
+          ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          phones = [x for rt, xs in d.items() if "iOS" in rt for x in xs if x["name"].startswith("iPhone")]
+          best = [x for x in phones if "Pro Max" in x["name"]] or phones
+          print(best[-1]["udid"])')
+          echo "SIM=$ID" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$ID"
+      - name: Tests (a fake TV on this machine) and screenshots
+        run: |
+          python3 mobile/fake_tv.py 5555 &
+          sleep 1
+          mkdir -p mobile/out
+          cd mobile/ios
+          set +e
+          xcodebuild test -project MaTV.xcodeproj -scheme MaTV -destination "id=$SIM" -resultBundlePath ../out/tests.xcresult \
+            CODE_SIGNING_ALLOWED=NO > ../out/xcodebuild.log 2>&1
+          code=$?
+          grep -E "error:|Test Case .*(passed|failed|skipped)|XCTAssert|Skipped|\*\* (TEST|BUILD)" ../out/xcodebuild.log | head -300
+          exit $code
+      - name: Export the screenshots
+        if: always()
+        run: |
+          mkdir -p mobile/out/shots
+          [ -d mobile/out/tests.xcresult ] && xcrun xcresulttool export attachments --path mobile/out/tests.xcresult --output-path mobile/out/shots || true
+          ls -la mobile/out/shots || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios
+          path: |
+            mobile/out/shots
+            mobile/out/xcodebuild.log
+      - name: TestFlight
+        if: inputs.upload
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          [ -n "$TEAM" ] && [ -n "$KEY_ID" ] && [ -n "$ISSUER" ] && [ -n "$KEY_P8" ] || { echo "Secrets Apple manquants (mobile/STORE.md)"; exit 1; }
+          KEY="$RUNNER_TEMP/AuthKey_$KEY_ID.p8"
+          echo "$KEY_P8" > "$KEY"
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $KEY -authenticationKeyID $KEY_ID -authenticationKeyIssuerID $ISSUER"
+          cd mobile/ios
+          xcodebuild archive -project MaTV.xcodeproj -scheme MaTV -configuration Release -destination "generic/platform=iOS" \
+            -archivePath ../out/MaTV.xcarchive DEVELOPMENT_TEAM="$TEAM" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" $AUTH
+          /usr/libexec/PlistBuddy -c "Add :teamID string $TEAM" ExportOptions.plist
+          xcodebuild -exportArchive -archivePath ../out/MaTV.xcarchive -exportOptionsPlist ExportOptions.plist \
+            -exportPath ../out/export $AUTH

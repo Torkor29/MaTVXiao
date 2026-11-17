@@ -1,0 +1,50 @@
+plugins { id 'com.android.application' }
+
+// Release signing: keystore.properties next to this file (never in git), or the CI's environment variables.
+def ks = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) ksFile.withInputStream { ks.load(it) }
+def sec = { String k -> ks.getProperty(k) ?: System.getenv('MATV_' + k.toUpperCase()) }
+
+android {
+    namespace 'io.matv.app'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'io.matv.app'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+    signingConfigs {
+        release {
+            if (sec('storeFile')) {
+                storeFile rootProject.file(sec('storeFile'))
+                storePassword sec('storePassword')
+                keyAlias sec('keyAlias')
+                keyPassword sec('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (sec('storeFile')) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    // The demo ("Essayer sans TV") runs MaTV Connect, the TV's own web app, from the phone: the same files the TV serves.
+    sourceSets.main.assets.srcDirs += ["$buildDir/generated/connect"]
+    testOptions.unitTests { includeAndroidResources = true; all { maxHeapSize = '3g'; jvmArgs '--add-opens=java.base/java.nio=ALL-UNNAMED'; systemProperty 'robolectric.graphicsMode', 'NATIVE'; systemProperty 'shots', "$rootDir/shots"; systemProperty 'certs', "$rootDir/certs"; testLogging.showStandardStreams = true } }
+    lint { abortOnError false; checkReleaseBuilds false }
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}
+
+tasks.register('copyConnect', Copy) {
+    from('../../../launcher/app/assets/connect') { include 'index.html', 'icon.png' }
+    into "$buildDir/generated/connect/connect"
+}
+preBuild.dependsOn 'copyConnect'

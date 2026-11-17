@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.freemytv"
-    android:versionCode="33"
-    android:versionName="2.9.0">
+    android:versionCode="34"
+    android:versionName="2.10.0">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -292,6 +292,12 @@
             </intent-filter>
         </service>
 
+        <!-- The MaTV phone app pairs over ADB (am broadcast): only the shell holds DUMP. -->
+        <receiver
+            android:name=".PairReceiver"
+            android:process=":home"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
         <receiver
             android:name=".HomeReceiver"
             android:exported="false">

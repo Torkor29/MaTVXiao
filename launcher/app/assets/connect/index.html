@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MaTV">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/icon.png">
-<link rel="icon" href="/icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
 <title>MaTV</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,7 +64,7 @@ nav.tabs button[aria-current="page"]{color:var(--ink);background:rgba(255,255,25
   nav.tabs button{flex:none;flex-direction:row;gap:12px;min-width:0;padding:11px 14px;border-radius:12px;font-size:15px;font-weight:550;justify-content:flex-start}
   nav.tabs button svg{width:22px;height:22px}
   .brand{display:flex;align-items:center;gap:10px;padding:0 10px 26px;font:700 20px var(--display);letter-spacing:-.01em}
-  .brand i{width:30px;height:30px;border-radius:9px;background:url(/icon.png) center/cover}
+  .brand i{width:30px;height:30px;border-radius:9px;background:url(icon.png) center/cover}
   main{padding:40px 44px 60px}
 }
 
@@ -239,7 +239,7 @@ button.row{width:100%;text-align:left;color:inherit}
 /* Pairing */
 .pair{min-height:100vh;display:grid;place-items:center;padding:30px 22px;text-align:center}
 .pair .card{max-width:440px}
-.pair .glyph{width:120px;height:120px;margin:0 auto 22px;border-radius:30px;background:url(/icon.png) center/cover;box-shadow:0 30px 60px -18px rgba(0,0,0,.8)}
+.pair .glyph{width:120px;height:120px;margin:0 auto 22px;border-radius:30px;background:url(icon.png) center/cover;box-shadow:0 30px 60px -18px rgba(0,0,0,.8)}
 .pair ol{text-align:left;color:var(--ink2);padding-left:22px;margin:22px auto;max-width:330px}
 .pair ol li{margin:8px 0}
 .pair ol b{color:var(--ink)}
@@ -319,6 +319,7 @@ const fmt = n => n.toLocaleString("fr-FR");
 
 /* ---------- The TV's API ---------- */
 async function api(path, opts = {}) {
+  if (DEMO) return demoApi(path, opts);
   const headers = Object.assign({}, opts.headers || {});
   if (S.token) headers.Authorization = "Bearer " + S.token;
   if (opts.json !== undefined) { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(opts.json); }
@@ -331,8 +332,57 @@ async function api(path, opts = {}) {
   if (!res.ok || data.ok === false) throw new Error(data.error || ("Erreur " + res.status));
   return data;
 }
-const img = id => `/img/${encodeURIComponent(id)}?t=${encodeURIComponent(S.token)}`;
-const full = id => img(id) + "&s=full";
+const img = id => DEMO ? demoImg(id) : `/img/${encodeURIComponent(id)}?t=${encodeURIComponent(S.token)}`;
+const full = id => DEMO ? demoImg(id) : img(id) + "&s=full";
+
+/* ---------- Demo: a TV that lives in the page (the MaTV app's "Essayer sans TV", and the stores' reviewers, who
+   have no Android TV). Nothing leaves the phone; the photos come from Wikimedia Commons like the real library. ---------- */
+const DEMO = /(^|[#&])demo(&|$)/.test(location.hash);
+const DEMO_ITEMS = [{"id": "d0", "title": "Chapelle Saint-Léonard, Albeck", "credit": "Johann Jaritz", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Albeck_Benesirnitz_Leonhard-Kapelle_06052015_3266.jpg/960px-Albeck_Benesirnitz_Leonhard-Kapelle_06052015_3266.jpg", "collection": "landscape"}, {"id": "d1", "title": "Amanecer en el lago Titicaca, Puno, Perú", "credit": "Diego Delso", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Amanecer_en_el_lago_Titicaca%2C_Puno%2C_Per%C3%BA%2C_2015-08-01%2C_DD_01.JPG/960px-Amanecer_en_el_lago_Titicaca%2C_Puno%2C_Per%C3%BA%2C_2015-08-01%2C_DD_01.JPG", "collection": "landscape"}, {"id": "d2", "title": "Catedrales de Tara, Chile", "credit": "Diego Delso", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Catedrales_de_Tara%2C_Chile%2C_2016-02-07%2C_DD_62.JPG/960px-Catedrales_de_Tara%2C_Chile%2C_2016-02-07%2C_DD_62.JPG", "collection": "landscape"}, {"id": "d3", "title": "Cerro Aucanquilcha, Chile", "credit": "Diego Delso", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Cerro_Aucanquilcha%2C_Chile%2C_2016-02-10%2C_DD_15.JPG/960px-Cerro_Aucanquilcha%2C_Chile%2C_2016-02-10%2C_DD_15.JPG", "collection": "landscape"}, {"id": "d4", "title": "Lac Louise", "credit": "Chensiyuan", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6c/1_lake_louise_pano_2019.jpg/960px-1_lake_louise_pano_2019.jpg", "collection": "landscape"}, {"id": "d5", "title": "Tianzi Shan, Zhangjiajie", "credit": "chensiyuan", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/1_tianzishan_wulingyuan_zhangjiajie_2012.jpg/960px-1_tianzishan_wulingyuan_zhangjiajie_2012.jpg", "collection": "landscape"}, {"id": "d6", "title": "Digue de Frontignan", "credit": "Christian Ferrer", "license": "CC BY 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Dike_in_Frontignan.jpg/960px-Dike_in_Frontignan.jpg", "collection": "landscape"}, {"id": "d7", "title": "Nosy Iranja, Madagascar", "credit": "Diego Delso", "license": "CC BY-SA 4.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Nosy_Iranja%2C_Madagascar%2C_2025-09-17%2C_DD_21.jpg/960px-Nosy_Iranja%2C_Madagascar%2C_2025-09-17%2C_DD_21.jpg", "collection": "landscape"}, {"id": "d8", "title": "Hong Kong, panorama", "credit": "Ralf Roletschek", "license": "CC BY 3.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/13-08-08-hongkong-by-RalfR-Panorama2.jpg/960px-13-08-08-hongkong-by-RalfR-Panorama2.jpg", "collection": "city"}, {"id": "d9", "title": "Galerie Colbert", "credit": "Benh LIEU SONG", "license": "CC BY 3.0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Galerie_Colbert.jpg/960px-Galerie_Colbert.jpg", "collection": "city"}, {"id": "d10", "title": "Le mont Fuji au coucher du soleil", "credit": "Romain Guy from San Francisco, USA", "license": "CC0", "u": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Mount_Fuji_at_sunset%2C_March_2025.jpg/960px-Mount_Fuji_at_sunset%2C_March_2025.jpg", "collection": "city"}];
+const D = DEMO ? {
+  state: {tv: {app: "MaTV", brand: "", model: "TV de démonstration", version: "2.10.0", android: "14"},
+    saver: {mode: "art", collection: "landscape", seconds: 60, clock: true, caption: true},
+    library: {count: DEMO_ITEMS.length, max: 200},
+    picks: {mood: "all", style: "billboard", on: true, moods: [["all", "Tout"], ["laugh", "Rire"], ["action", "Action"], ["thrill", "Frissons"], ["mystery", "Enquête"], ["feel", "Émotion"], ["escape", "Évasion"], ["family", "En famille"], ["learn", "Découvrir"]].map(([id, name]) => ({id, name}))}},
+  lib: {collections: [{id: "landscape", name: "Paysages"}, {id: "city", name: "Villes"}],
+    items: DEMO_ITEMS.map(x => Object.assign({enabled: true, source: "bundled", remote: "", link: "", added: 0}, x))},
+  apps: ["Netflix", "YouTube", "Prime Video", "Disney+", "myCANAL", "Spotify", "Plex", "ARTE"].map((name, i) => ({pkg: "demo." + i, name})),
+  n: 0,
+} : null;
+async function demoApi(path, opts) {
+  await new Promise(r => setTimeout(r, 150));
+  const b = opts.json || {}, its = D.lib.items, p = path.split("?")[0];
+  const pick = ids => its.filter(w => (ids || []).includes(w.id));
+  switch (p) {
+    case "/api/hello": return Object.assign({paired: true}, D.state.tv);
+    case "/api/state": D.state.library.count = its.length; return D.state;
+    case "/api/wallpapers": return Object.assign({active: D.state.saver.collection, max: 200}, D.lib);
+    case "/api/apps": return {apps: D.apps};
+    case "/api/settings":
+      ["mode", "collection", "seconds", "clock", "caption"].forEach(k => { if (k in b) D.state.saver[k] = b[k]; });
+      ["mood", "style"].forEach(k => { if (k in b) D.state.picks[k] = b[k]; });
+      return D.state;
+    case "/api/add": {
+      const it = {id: "a" + (++D.n), title: b.title, credit: b.credit, license: b.license, link: b.link, remote: b.remote, source: "commons",
+        collection: b.collection || "landscape", enabled: true, u: String(b.url || "").replace("/3840px-", "/960px-")};
+      its.unshift(it); return {ok: true, item: it};
+    }
+    case "/api/upload": {
+      const it = {id: "u" + (++D.n), title: "Ma photo", credit: "", source: "phone", collection: new URLSearchParams(path.split("?")[1] || "").get("collection") || "landscape",
+        enabled: true, u: URL.createObjectURL(opts.body)};
+      its.unshift(it); return {ok: true, item: it};
+    }
+    case "/api/update": pick(b.ids).forEach(w => ["collection", "enabled", "title"].forEach(k => { if (k in b) w[k] = b[k]; })); return {ok: true};
+    case "/api/delete": D.lib.items = its.filter(w => !(b.ids || []).includes(w.id)); return {ok: true};
+    case "/api/collections":
+      if (b.action === "create") { const id = "c" + (++D.n); D.lib.collections.push({id, name: b.name}); return {ok: true, id}; }
+      if (b.action === "rename") D.lib.collections.forEach(c => { if (c.id === b.id) c.name = b.name; });
+      if (b.action === "delete") { D.lib.collections = D.lib.collections.filter(c => c.id !== b.id); if (b.withItems) D.lib.items = its.filter(w => w.collection !== b.id); }
+      return {ok: true};
+    default: return {ok: true};   // show, remote, launch: the demo TV just nods
+  }
+}
+const demoImg = id => { const w = D.lib.items.find(x => x.id === id); return w ? w.u : ""; };
 
 function forget() { try { localStorage.removeItem("matv.k"); } catch (e) {} S.token = null; renderPair(); }
 
@@ -353,9 +403,10 @@ function ambient(url) { if (url) $("#ambient").style.backgroundImage = `url("${u
 
 /* ---------- Boot ---------- */
 async function boot() {
-  const m = location.hash.match(/k=([A-Za-z0-9_-]{20,})/);
+  if (DEMO) S.token = "demo";
+  const m = DEMO ? null : location.hash.match(/k=([A-Za-z0-9_-]{20,})/);
   if (m) { try { localStorage.setItem("matv.k", m[1]); } catch (e) {} S.token = m[1]; history.replaceState(null, "", location.pathname); }
-  else { try { S.token = localStorage.getItem("matv.k"); } catch (e) {} }
+  else if (!DEMO) { try { S.token = localStorage.getItem("matv.k"); } catch (e) {} }
   if (!S.token) return renderPair();
   try {
     S.hello = await api("/api/hello");
@@ -363,7 +414,7 @@ async function boot() {
     await Promise.all([loadState(), loadLib()]);
   } catch (e) { if (S.token) return renderOffline(e.message); return; }
   renderShell();
-  go(location.hash.replace("#", "") || "tv");
+  go(DEMO ? "tv" : location.hash.replace("#", "") || "tv");
   loadIndex();
 }
 async function loadState() { S.state = await api("/api/state"); }
@@ -804,7 +855,7 @@ function viewRemote() {
   <h2>Applis</h2>
   <div class="apps" id="apps">${S.apps ? appsHtml() : `<p class="note">Chargement…</p>`}</div>`;
 }
-const appsHtml = () => S.apps.map(a => `<button class="app-tile" data-app="${esc(a.pkg)}" aria-label="${esc(a.name)}"><span>${esc(a.name)}</span><img loading="lazy" src="/icon/${encodeURIComponent(a.pkg)}?t=${encodeURIComponent(S.token)}" alt="" onerror="this.remove()"></button>`).join("");
+const appsHtml = () => S.apps.map(a => `<button class="app-tile" data-app="${esc(a.pkg)}" aria-label="${esc(a.name)}"><span>${esc(a.name)}</span>${DEMO ? "" : `<img loading="lazy" src="/icon/${encodeURIComponent(a.pkg)}?t=${encodeURIComponent(S.token)}" alt="" onerror="this.remove()">`}</button>`).join("");
 after.remote = async () => {
   const pad = $("#pad");
   let start = null;

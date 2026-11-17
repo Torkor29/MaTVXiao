@@ -9,3 +9,13 @@ out/
 platform-tools/
 matv-etat.json
 !dist/*.apk
+# Phone apps: build output and local settings
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/keystore.properties
+mobile/android/shots/
+mobile/ios/MaTV.xcodeproj/
+mobile/out/
+!mobile/android/gradle/wrapper/gradle-wrapper.jar
