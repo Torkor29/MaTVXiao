@@ -1,6 +1,5 @@
-Installation en un double-clic : l'installeur trouve tout seul les TV de ton Wi-Fi (avec leur nom), te guide pour activer le débogage si besoin, et installe MaTV sur une TV ou sur toutes.
+Nouveau : MaTV Installer, l'appli pour téléphone Android. Sur le même Wi-Fi que la TV, elle trouve les TV (avec leur nom), te guide pour activer le débogage USB si besoin, et installe ou met à jour MaTV, MaTV Live et TizenTube. Plus besoin d'ordinateur.
 
-- Windows : télécharge Installer-MaTV.bat ci-dessous et double-clique dessus.
-- Mac / Linux : curl -fsSL https://raw.githubusercontent.com/Torkor29/MaTVXiao/main/install.sh | bash
+Télécharge MaTV-Installer.apk ci-dessous sur le téléphone et ouvre-le.
 
-Relancé plus tard, l'installeur ne réinstalle que ce qui a changé. Les TV déjà équipées se mettent à jour toutes seules.
+Les fichiers sont vérifiés (signature MaTV) avant d'aller sur la TV. Sur la TV, MaTV s'ouvre directement sur le choix de l'écran d'accueil après l'installation.

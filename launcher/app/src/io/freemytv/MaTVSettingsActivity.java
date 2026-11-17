@@ -181,6 +181,7 @@ public class MaTVSettingsActivity extends Activity {
         root.addView(panel, lp);
 
         showCategories(0);
+        openFromIntent(getIntent());
     }
 
     @Override protected void onResume() {
@@ -406,7 +407,8 @@ public class MaTVSettingsActivity extends Activity {
         phone.fill = this::fillPhone;
 
         Category sys = add("cat_system", "Système", "Accueil, langue, télécommande et mises à jour.");
-        page(sys, "Écran d'accueil", "MaTV, ou l'accueil d'origine de la TV.", "cat_system", this::fillHomeMode).live = this::modeLabel;
+        homeModeOpt = page(sys, "Écran d'accueil", "MaTV, ou l'accueil d'origine de la TV.", "cat_system", this::fillHomeMode);
+        homeModeOpt.live = this::modeLabel;
         String[] langs = languageChoices();
         String[] langNames = new String[langs.length];
         for (int i = 0; i < langs.length; i++) langNames[i] = langs[i].equals("auto") ? "Automatique" : Ui.languageName(langs[i]);
@@ -426,6 +428,26 @@ public class MaTVSettingsActivity extends Activity {
                 startActivity(new Intent().setClassName("com.android.tv.settings", "com.android.tv.settings.MainSettings"));
             }
         });
+    }
+
+    /** The home screen page: MaTV Installer (on the phone) opens it right after installing, with extra open=home_mode. */
+    private Opt homeModeOpt;
+
+    private void openFromIntent(Intent i) {
+        if (i == null || !"home_mode".equals(i.getStringExtra("open")) || homeModeOpt == null) return;
+        for (int at = 0; at < categories.size(); at++) {
+            if (categories.get(at).opts.contains(homeModeOpt)) {
+                showCategory(at, categories.get(at).opts.indexOf(homeModeOpt));
+                homeModeOpt.action.run();
+                return;
+            }
+        }
+    }
+
+    @Override protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        openFromIntent(i);
     }
 
     private Category add(String symbol, String name, String about) {

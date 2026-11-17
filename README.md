@@ -6,21 +6,21 @@ Pour la **Xiaomi TV A Pro 55"** (Google TV 14), et toute TV Android TV / Google 
 |---|---|---|
 | **MaTV (écran d'accueil)** `apk/MaTV-Home.apk` | [Free My TV](https://github.com/simbasjungles/free-my-tv) (MIT) + la liste Xiaomi testée de [CleanYourTV](https://github.com/Gathin23/cleanyourtv) (MIT) | Remplace l'accueil Google TV/PatchWall plein de pub, désactive la télémétrie et les promos Xiaomi, ajoute les réglages d'apparence et le mode art |
 | **MaTV Live** `apk/MaTV-Live.apk` | nouvelle appli | Lecteur IPTV avec codes Xtream : chaînes avec guide, films, séries, favoris |
+| **MaTV Installer** `MaTV-Installer.apk` | nouvelle appli (téléphone Android) | Trouve les TV du Wi‑Fi et y installe ou met à jour MaTV, sans ordinateur |
 | **TizenTube** | [reisxd/TizenTubeCobalt](https://github.com/reisxd/TizenTubeCobalt) | YouTube sans pub, avec SponsorBlock, téléchargé à jour par l'installeur |
 
-## Installer sur une TV (environ 10 minutes, rien à taper)
+## Installer sur une TV : juste le téléphone et le Wi‑Fi
 
-Il suffit d'un ordinateur sur **le même Wi‑Fi que la TV**. L'installeur trouve tout seul les TV du réseau, affiche leur nom et installe sur celle que tu choisis (ou sur toutes).
+1. **Sur un téléphone Android** connecté au Wi‑Fi de la TV : télécharge [**MaTV-Installer.apk**](https://github.com/Torkor29/MaTVXiao/releases/latest/download/MaTV-Installer.apk) et ouvre-le (Android demande d'autoriser l'installation depuis le navigateur : accepte).
+2. **L'appli trouve les TV du réseau**, avec leur nom. Touche la tienne.
+   - *À préparer* : l'appli montre comment activer le **débogage USB** (une seule fois par TV, 1 minute avec la télécommande ; Android TV l'exige pour installer une appli depuis un autre appareil). Elle continue toute seule dès que c'est fait.
+   - *Prête* : la TV demande *Autoriser le débogage USB ?* : coche *Toujours autoriser*, OK.
+3. **Installer** : l'appli télécharge la dernière version de MaTV, MaTV Live et TizenTube, vérifie que les fichiers sont bien signés par MaTV, et les envoie à la TV. Si Play Protect s'affiche sur la TV : *Plus d'infos* → *Installer quand même*.
+4. **Ouvrir MaTV sur la TV** ouvre directement la bonne page : choisis **MaTV** comme écran d'accueil et accepte encore une fois le débogage (c'est MaTV qui le demande cette fois).
 
-1. **Sur la TV, une seule fois** : Paramètres → Système → À propos → appuie 7 fois sur *Build du système Android TV*. Puis Paramètres → Système → Options pour les développeurs → **Débogage USB** activé. *(Android TV l'exige pour installer une appli depuis un ordinateur ; si tu l'oublies, l'installeur te guide et attend.)*
-2. **Sur l'ordinateur** :
-   - **Windows** : télécharge [`Installer-MaTV.bat`](https://github.com/Torkor29/MaTVXiao/releases/latest/download/Installer-MaTV.bat) et double-clique dessus.
-   - **Mac / Linux** : dans le Terminal, `curl -fsSL https://raw.githubusercontent.com/Torkor29/MaTVXiao/main/install.sh | bash`
-   
-   Choisis la TV dans la liste. Sur la TV, accepte *Autoriser le débogage USB ?* en cochant *Toujours autoriser*. Si Play Protect affiche *Appli à risque* : *Plus d'infos* → *Installer quand même*.
-3. **Sur la TV** : ouvre l'appli **MaTV** → *Système* → *Écran d'accueil* → **MaTV**, puis accepte encore une fois le débogage.
+Relancée plus tard, l'appli montre ce qui est à jour et ne réinstalle que le reste. Elle sert aussi pour la TV d'un proche : même Wi‑Fi, et c'est tout.
 
-L'installeur télécharge lui-même `adb` (chez Google), la dernière version de MaTV et TizenTube. Relancé plus tard, il ne réinstalle que ce qui a changé. Pour viser une TV précise : `install.bat 192.168.1.42` (ou `… | bash -s 192.168.1.42`).
+**Sans téléphone Android** (iPhone) : depuis un ordinateur sur le même Wi‑Fi, [`Installer-MaTV.bat`](https://github.com/Torkor29/MaTVXiao/releases/latest/download/Installer-MaTV.bat) (Windows, double-clic) ou `curl -fsSL https://raw.githubusercontent.com/Torkor29/MaTVXiao/main/install.sh | bash` (Mac, Linux). Ils trouvent aussi les TV tout seuls.
 
 ## Régler sur la TV
 
@@ -82,9 +82,9 @@ La TV vérifie chaque jour la dernière version publiée sur ce dépôt (onglet 
 
 Avant chaque installation, la TV vérifie que le fichier vient bien de ce dépôt, qu'il n'a pas été modifié (empreinte SHA-256) et qu'il est **signé avec la clé de MaTV**. Une version signée avec une autre clé est refusée.
 
-Les clés de signature (`launcher/freemytv.keystore` et `iptv/matvlive.keystore`) ne sont **jamais** sur GitHub. Garde-en une copie : sans elles, une nouvelle version ne pourra pas s'installer par-dessus l'ancienne.
+Les clés de signature (`launcher/freemytv.keystore`, `iptv/matvlive.keystore` et `installer/matvinstaller.keystore`) ne sont **jamais** sur GitHub. Garde-en une copie : sans elles, une nouvelle version ne pourra pas s'installer par-dessus l'ancienne.
 
-Pour une nouvelle TV, `Installer-MaTV.bat` (ou `install.sh`) suffit : il trouve la TV sur le Wi‑Fi. Ensuite elle se met à jour toute seule.
+Pour une nouvelle TV, l'appli **MaTV Installer** sur le téléphone suffit (ou `Installer-MaTV.bat` / `install.sh` depuis un ordinateur). Ensuite la TV se met à jour toute seule.
 
 ## Clé TMDB
 
