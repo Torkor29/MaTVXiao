@@ -87,7 +87,9 @@ public class MaTVSettingsActivity extends Activity {
     private android.widget.ImageView sideImage;
     private LinearLayout list;
     private ScrollView scroll;
-    private FrameLayout root;
+    private FrameLayout root, panel;
+    private android.widget.ImageView ambient;
+    private View veil;
     /** -1: the categories; else the open category. */
     private int open = -1, lastCategory;
     /** The open pages, the category first; empty on the categories. */
@@ -105,11 +107,20 @@ public class MaTVSettingsActivity extends Activity {
         root = new FrameLayout(this);
         root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] {bg0, bg1}));
         setContentView(root);
+        // The room: one of the wallpapers, blurred, under a veil (like the phone's web app).
+        ambient = new android.widget.ImageView(this);
+        ambient.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        ambient.setAlpha(0f);
+        root.addView(ambient, new FrameLayout.LayoutParams(-1, -1));
+        veil = new View(this);
+        root.addView(veil, new FrameLayout.LayoutParams(-1, -1));
+        paintVeil();
+        loadAmbient();
 
         pageTitle = text(40, ink, Ui.displayMedium);
         pageTitle.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(-1, -2, Gravity.TOP);
-        tp.topMargin = px(64);
+        tp.topMargin = px(58);
         root.addView(pageTitle, tp);
 
         // Left: the large symbol, the category's name, then the focused row's explanation.
@@ -120,7 +131,7 @@ public class MaTVSettingsActivity extends Activity {
         sp.leftMargin = px(80);
         root.addView(side, sp);
         sideSymbol = new SymbolView(this);
-        side.addView(sideSymbol, new LinearLayout.LayoutParams(px(260), px(260)));
+        side.addView(sideSymbol, new LinearLayout.LayoutParams(px(300), px(300)));
         sideImage = new android.widget.ImageView(this);
         sideImage.setVisibility(View.GONE);
         sideImage.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
@@ -149,18 +160,25 @@ public class MaTVSettingsActivity extends Activity {
         scroll = new ScrollView(this);
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setClipToPadding(false);
-        scroll.setPadding(0, px(170), 0, px(120));
+        scroll.setPadding(0, px(26), 0, px(26));
         scroll.setVerticalFadingEdgeEnabled(true);
-        scroll.setFadingEdgeLength(px(80));
+        scroll.setFadingEdgeLength(px(48));
         list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         list.setClipChildren(false);
         list.setClipToPadding(false);
         list.setPadding(px(28), 0, px(28), 0);   // room for the focused row's growth
         scroll.addView(list, new ScrollView.LayoutParams(-1, -2));
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px(900), -1, Gravity.END);
-        lp.rightMargin = px(100);
-        root.addView(scroll, lp);
+        // The list sits in a pane of glass.
+        panel = new FrameLayout(this);
+        paintPanel();
+        panel.setClipToOutline(true);
+        panel.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px(940), -1, Gravity.END);
+        lp.rightMargin = px(80);
+        lp.topMargin = px(150);
+        lp.bottomMargin = px(64);
+        root.addView(panel, lp);
 
         showCategories(0);
     }
@@ -198,6 +216,80 @@ public class MaTVSettingsActivity extends Activity {
     };
 
     /** Light or dark like the home screen's theme ("auto": light by day). */
+    private void paintVeil() {
+        veil.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, light
+                ? new int[] {0xB8F5F5F7, 0xD9F5F5F7, 0xF0ECECF0}
+                : new int[] {0x8C05070D, 0xC705070D, 0xEB05070D}));
+    }
+
+    private void paintPanel() {
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(px(40));
+        g.setColor(light ? 0x8CFFFFFF : 0x1AFFFFFF);
+        g.setStroke(Math.max(1, px(1.5f)), light ? 0x14000000 : 0x1FFFFFFF);
+        panel.setBackground(g);
+    }
+
+    /** A soft blur of one wallpaper: made small, blurred, and drawn large (the scaling smooths it further). */
+    private void loadAmbient() {
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            try {
+                java.io.File f = Art.randomThumb(app);
+                if (f == null) return;
+                android.graphics.Bitmap src = android.graphics.BitmapFactory.decodeFile(f.getPath());
+                if (src == null) return;
+                android.graphics.Bitmap small = android.graphics.Bitmap.createScaledBitmap(src, 96, 54, true);
+                src.recycle();
+                blur(small, 4);
+                blur(small, 4);
+                handler.post(() -> {
+                    ambient.setImageBitmap(small);
+                    ambient.animate().alpha(1f).setDuration(900).start();
+                });
+            } catch (Throwable ignored) {   // a backdrop is never worth a crash
+            }
+        }, "SettingsBackdrop").start();
+    }
+
+    /** A box blur of radius r, horizontal then vertical, in place. */
+    private static void blur(android.graphics.Bitmap b, int r) {
+        int w = b.getWidth(), h = b.getHeight();
+        int[] px = new int[w * h], out = new int[w * h];
+        b.getPixels(px, 0, w, 0, 0, w, h);
+        for (int pass = 0; pass < 2; pass++) {
+            boolean horizontal = pass == 0;
+            int lines = horizontal ? h : w, len = horizontal ? w : h;
+            for (int l = 0; l < lines; l++) {
+                for (int i = 0; i < len; i++) {
+                    int rs = 0, gs = 0, bs = 0, n = 0;
+                    for (int d = -r; d <= r; d++) {
+                        int j = Math.max(0, Math.min(len - 1, i + d));
+                        int c = px[horizontal ? l * w + j : j * w + l];
+                        rs += (c >> 16) & 255; gs += (c >> 8) & 255; bs += c & 255; n++;
+                    }
+                    out[horizontal ? l * w + i : i * w + l] = 0xFF000000 | (rs / n << 16) | (gs / n << 8) | bs / n;
+                }
+            }
+            int[] t = px; px = out; out = t;
+        }
+        b.setPixels(px, 0, w, 0, 0, w, h);
+    }
+
+    /** Each category's colour: its icon tile in the list and the large one on the left. */
+    private static int tint(String symbol) {
+        if (symbol == null) return 0xFF8E8E93;
+        switch (symbol) {
+            case "cat_look": return 0xFFAF52DE;
+            case "cat_home": return 0xFF0A84FF;
+            case "cat_picks": return 0xFFFF9F0A;
+            case "cat_saver": return 0xFF30B0C7;
+            case "cat_widgets": return 0xFF34C759;
+            case "cast": return 0xFF5E5CE6;
+            default: return 0xFF8E8E93;
+        }
+    }
+
     private void palette() {
         String t = Prefs.theme();
         int hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
@@ -277,8 +369,10 @@ public class MaTVSettingsActivity extends Activity {
         Category saver = add("cat_saver", "Écran de veille", "Quand la TV reste inactive.");
         choice(saver, "Contenu", "Suggestions : les films et séries de tes services. Fonds d'écran : tes images, en plein écran.",
                 Prefs.SAVER_MODES, new String[] {"Suggestions", "Fonds d'écran"}, Prefs::saverMode, Prefs::setSaverMode);
-        choice(saver, "Fonds d'écran", "Tes fonds : art, paysages, ou tout mélangé.",
-                Prefs.SAVER_CATEGORIES, new String[] {"Tout", "Art", "Paysages"}, Prefs::saverCategory, Prefs::setSaverCategory);
+        Opt col = act(saver, "Collection", "Les fonds qui défilent. Tes collections se gèrent depuis le téléphone (Réglages › Téléphone).",
+                () -> stepCollection(1));
+        col.step = this::stepCollection;
+        col.live = () -> collectionName(Art.activeCollection(c)) + "  ·  " + inCollection(Art.activeCollection(c));
         String[] secs = new String[Prefs.SAVER_SECONDS.length];
         for (int i = 0; i < secs.length; i++) secs[i] = String.valueOf(Prefs.SAVER_SECONDS[i]);
         choice(saver, "Durée", "Le temps de chaque image.",
@@ -303,6 +397,9 @@ public class MaTVSettingsActivity extends Activity {
             Opt o = toggle(widgets, coins[i], "Afficher " + coins[i] + " avec les cryptos.", () -> Prefs.coin(at), v -> Prefs.setCoin(at, v));
             o.dimmed = () -> !Prefs.quotes();
         }
+
+        Category phone = add("cast", "Téléphone", "Gère tes fonds d'écran et pilote la TV depuis ton téléphone.");
+        phone.fill = this::fillPhone;
 
         Category sys = add("cat_system", "Système", "Accueil, langue, télécommande et mises à jour.");
         page(sys, "Écran d'accueil", "MaTV, ou l'accueil d'origine de la TV.", "cat_system", this::fillHomeMode).live = this::modeLabel;
@@ -389,6 +486,68 @@ public class MaTVSettingsActivity extends Activity {
         v[0] = "auto";
         System.arraycopy(all, 0, v, 1, all.length);
         return v;
+    }
+
+    // MARK: - Wallpaper collections
+
+    private void stepCollection(int dir) {
+        List<String[]> cols = Art.collections(this);
+        List<String> ids = new ArrayList<>();
+        ids.add("all");
+        for (String[] col : cols) ids.add(col[0]);
+        int at = Math.max(0, ids.indexOf(Art.activeCollection(this)));
+        Prefs.setSaverCategory(ids.get((at + dir + ids.size()) % ids.size()));
+        if (!Art.on()) Prefs.setSaverMode("art");
+        refreshValues();
+    }
+
+    private String collectionName(String id) {
+        if (id.equals("all")) return "Toutes";
+        for (String[] col : Art.collections(this)) if (col[0].equals(id)) return col[1];
+        return "Toutes";
+    }
+
+    private String inCollection(String id) {
+        org.json.JSONArray items = Art.library(this).optJSONArray("items");
+        int n = 0;
+        for (int i = 0; items != null && i < items.length(); i++) {
+            org.json.JSONObject o = items.optJSONObject(i);
+            if (o.optBoolean("enabled", true) && (id.equals("all") || id.equals(o.optString("collection")))) n++;
+        }
+        return n + (n > 1 ? " fonds" : " fond");
+    }
+
+    // MARK: - Phone (MaTV Connect)
+
+    private String phoneUrlShown = "";
+
+    private void fillPhone(Category p) {
+        Companion.start(this);
+        Companion.onChange = () -> { if (!stack.isEmpty() && stack.get(stack.size() - 1) == p) { if (!phoneUrlShown.equals(Companion.pairUrl(this))) rebuildKeeping(null); else refreshValues(); } };
+        String url = Prefs.connect() ? Companion.pairUrl(this) : "";
+        phoneUrlShown = url;
+        p.image = url.isEmpty() ? null : qrBitmap(Qr.encode(url));
+        p.about = !Prefs.connect() ? "MaTV Connect est coupé : active-le pour gérer la TV depuis ton téléphone."
+                : url.isEmpty() ? "La TV n'est pas encore sur le réseau. Le code apparaît dès qu'elle est connectée."
+                : "Scanne ce code avec l'appareil photo de ton téléphone (même Wi‑Fi que la TV). Sur iPhone, Partager › Sur l'écran d'accueil en fait une appli.";
+        Opt addr = info(p, "Adresse", () -> {
+            String b = Companion.baseUrl();
+            return b.isEmpty() ? "…" : b.replace("http://", "");
+        });
+        addr.about = () -> p.about;
+        Opt walls = info(p, "Fonds sur la TV", () -> Art.count(this) + " sur " + Art.MAX);
+        walls.about = () -> p.about;
+        toggle(p, "MaTV Connect", "Le serveur de la TV pour ton téléphone. Coupé, plus aucun téléphone ne peut s'y connecter.",
+                Prefs::connect, v -> {
+                    Prefs.setConnect(v);
+                    if (v) Companion.start(this); else Companion.stop();
+                    handler.postDelayed(() -> rebuildKeeping(null), 600);
+                });
+        act(p, "Déconnecter les téléphones", "Change le code : chaque téléphone devra scanner le nouveau QR code.", () -> {
+            Companion.newToken(this);
+            toast("Nouveau code : les téléphones sont déconnectés.");
+            rebuildKeeping(null);
+        });
     }
 
     // MARK: - Suggestions: why there are none
@@ -924,7 +1083,7 @@ public class MaTVSettingsActivity extends Activity {
             final int at = i;
             Category cat = categories.get(i);
             Row r = new Row(cat.name, null, true);
-            r.symbol = cat.symbol;
+            r.setSymbol(cat.symbol);
             r.setOnFocusChangeListener((v, has) -> {
                 r.focus(has);
                 if (has) side(cat.symbol, cat.name, cat.about, null);
@@ -1064,6 +1223,8 @@ public class MaTVSettingsActivity extends Activity {
     private void recreateKeeping(int focus) {
         palette();
         root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] {bg0, bg1}));
+        paintVeil();
+        paintPanel();
         pageTitle.setTextColor(ink);
         sideName.setTextColor(ink);
         sideText.setTextColor(dim);
@@ -1105,7 +1266,7 @@ public class MaTVSettingsActivity extends Activity {
     private final class SymbolView extends View {
         private String name;
 
-        SymbolView(Context c) { super(c); }
+        SymbolView(Context c) { super(c); setLayerType(View.LAYER_TYPE_SOFTWARE, null); }
 
         void set(String n) {
             if (n.equals(name)) return;
@@ -1115,10 +1276,30 @@ public class MaTVSettingsActivity extends Activity {
             invalidate();
         }
 
+        private final Paint tile = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF box = new RectF();
+
+        /** A large app-icon-like tile in the category's colour, lit from above, with the symbol in white. */
         @Override protected void onDraw(Canvas c) {
             if (name == null) return;
-            float pt = Symbols.pointSizeForHeight(getContext(), name, getHeight() * 0.62f);
-            Symbols.draw(getContext(), c, name, getWidth() / 2f, getHeight() / 2f, pt, light ? 0xFF3A3A3C : 0xFFE5E5EA);
+            float w = getWidth(), h = getHeight(), inset = w * 0.08f, rad = (w - 2 * inset) * 0.27f;
+            int base = tint(name);
+            box.set(inset, inset + w * 0.035f, w - inset, h - inset + w * 0.035f);
+            tile.setShader(null);
+            tile.setColor(0x40000000);
+            tile.setMaskFilter(new android.graphics.BlurMaskFilter(w * 0.06f, android.graphics.BlurMaskFilter.Blur.NORMAL));
+            c.drawRoundRect(box, rad, rad, tile);
+            tile.setMaskFilter(null);
+            box.set(inset, inset, w - inset, h - inset);
+            tile.setShader(new android.graphics.LinearGradient(0, box.top, 0, box.bottom, blend(base, 0xFFFFFFFF, 0.28f),
+                    blend(base, 0xFF000000, 0.12f), android.graphics.Shader.TileMode.CLAMP));
+            c.drawRoundRect(box, rad, rad, tile);
+            tile.setShader(new android.graphics.LinearGradient(0, box.top, 0, box.centerY(), 0x33FFFFFF, 0x00FFFFFF,
+                    android.graphics.Shader.TileMode.CLAMP));
+            c.drawRoundRect(box, rad, rad, tile);
+            tile.setShader(null);
+            float pt = Symbols.pointSizeForHeight(getContext(), name, (h - 2 * inset) * 0.5f);
+            Symbols.draw(getContext(), c, name, w / 2f, h / 2f, pt, 0xFFFFFFFF);
         }
     }
 
@@ -1136,6 +1317,30 @@ public class MaTVSettingsActivity extends Activity {
         private final ChevronView chevron;
         private boolean focused;
         private final GradientDrawable plateBg = new GradientDrawable();
+
+        private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF iconBox = new RectF();
+
+        /** The category list's rows carry their icon, in a small tile of the category's colour. */
+        void setSymbol(String s) {
+            symbol = s;
+            setWillNotDraw(false);
+            ((LayoutParams) title.getLayoutParams()).leftMargin = px(70);
+            title.requestLayout();
+        }
+
+        @Override protected void dispatchDraw(Canvas c) {
+            super.dispatchDraw(c);
+            if (symbol == null) return;
+            float size = px(48), top = (getHeight() - size) / 2f, left = getPaddingLeft();
+            iconBox.set(left, top, left + size, top + size);
+            int base = tint(symbol);
+            iconPaint.setShader(new android.graphics.LinearGradient(0, iconBox.top, 0, iconBox.bottom,
+                    blend(base, 0xFFFFFFFF, 0.25f), base, android.graphics.Shader.TileMode.CLAMP));
+            c.drawRoundRect(iconBox, px(12), px(12), iconPaint);
+            float pt = Symbols.pointSizeForHeight(getContext(), symbol, size * 0.58f);
+            Symbols.draw(getContext(), c, symbol, iconBox.centerX(), iconBox.centerY(), pt, 0xFFFFFFFF);
+        }
 
         Row(String text, Opt o, boolean opens) {
             super(MaTVSettingsActivity.this);
@@ -1204,7 +1409,7 @@ public class MaTVSettingsActivity extends Activity {
             animate().scaleX(has ? 1.04f : 1f).scaleY(has ? 1.04f : 1f).setDuration(160).start();
             update();
             if (has) {   // keep the focused row in view, with room around it
-                int top = getTop() - px(170), bottom = getBottom() + px(120);
+                int top = getTop() - px(40), bottom = getBottom() + px(60);
                 if (top < scroll.getScrollY()) scroll.smoothScrollTo(0, Math.max(0, top));
                 else if (bottom > scroll.getScrollY() + scroll.getHeight()) scroll.smoothScrollTo(0, bottom - scroll.getHeight());
             }

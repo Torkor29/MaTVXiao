@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.freemytv"
-    android:versionCode="25"
-    android:versionName="2.4.0">
+    android:versionCode="26"
+    android:versionName="2.5.0">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -138,6 +138,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- MaTV Connect: the phone's "Show on the TV" (opened by the TV's own ADB from behind other apps). -->
+        <activity
+            android:name=".ShowActivity"
+            android:process=":home"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="io.freemytv.show"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/FreeMyTV.Home" />
 
         <activity
             android:name=".QuickSettingsActivity"

@@ -24,11 +24,23 @@ Pour la **Xiaomi TV A Pro 55"** (Google TV 14), et toute TV Android TV / Google 
 - **Apparence** : thème (automatique, clair, sombre), style du verre (liquide, givré, opaque), teinte, couleur d'accent, taille des applis du dock, sons.
 - **Accueil** : haut de l'écran (*Suggestions*, *Vous regardiez* ou une horloge), applis du dock et leur ordre, boutons du haut, entrées et raccourcis du tiroir, icônes d'état.
 - **Suggestions** : présentation **Affiche** (image plein écran et vignettes, façon Netflix) ou **Cartes** (façon Apple TV), nombre de titres, services, clé TMDB.
-- **Écran de veille** : **Mode art** (uniquement des tableaux, montrés en entier), durée par image, horloge, légende, aperçu. Dix-neuf tableaux du Met sont livrés avec l'appli, d'autres arrivent ensuite de Chicago et Cleveland.
+- **Écran de veille** : **Fonds d'écran** (tes images, en plein écran) ou suggestions, la collection qui défile, durée par image, horloge, légende, aperçu. Les fonds se gèrent depuis le téléphone (MaTV Connect).
 - **Widgets** : météo, ville, prévisions, lecture en cours, cours des cryptos.
+- **Téléphone** : le QR code de MaTV Connect.
 - **Système** : écran d'accueil (retour à l'ancienne TV avec *Original*), langue, télécommande, minuterie de veille, mises à jour, réglages de la TV.
 
 *Boutons de la télécommande* → **YouTube** → *TizenTube* : le bouton YouTube ouvre la version sans pub.
+
+## MaTV Connect : la TV depuis ton téléphone
+
+Sur la TV : *Réglages* → **Téléphone**, puis scanne le QR code avec l'appareil photo du téléphone (même Wi‑Fi). Une web app s'ouvre ; sur iPhone, *Partager* → *Sur l'écran d'accueil* la garde comme une appli. Elle marche aussi depuis un ordinateur.
+
+- **Ma TV** : ce que montre l'écran de veille dans une TV miniature, et ses réglages (contenu, collection, durée, horloge, légende). *Lancer sur la TV* affiche les fonds tout de suite.
+- **Découvrir** : environ 1 400 photos et tableaux en haute définition (images « de qualité » de Wikimedia Commons, sous licence libre), rangés par thèmes : paysages, montagnes, lacs, mer, villes, Paris, Japon, peintures, espace… et une recherche. **+** envoie l'image sur la TV, qui la télécharge elle-même et la recadre en 16:9.
+- **Mes fonds** : tous les fonds de la TV, par collection. Importer tes photos (avec recadrage), ranger, retirer de la rotation, supprimer, créer des collections, afficher un fond sur la TV.
+- **Télécommande** : pavé tactile, retour, accueil, lecture, volume, texte à taper sur la TV, et les applis de la TV à ouvrir d'un geste. Elle passe par le débogage USB de la TV, déjà activé pour MaTV.
+
+La web app est servie par la TV elle-même (`http://<IP de la TV>:8765`) : rien ne passe par un serveur extérieur, à part les images de Wikimedia. Seul un téléphone qui a scanné le QR code peut agir ; *Déconnecter les téléphones* change le code. La bibliothèque en ligne est dans `library/index.json` (outils dans `tools/library/`).
 
 ## Ce qui est désactivé (jamais désinstallé)
 

@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MaTV">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon.png">
+<link rel="icon" href="/icon.png">
+<title>MaTV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0B1020;
+  --ink:#F5F3EE;
+  --ink2:rgba(235,235,245,.62);
+  --ink3:rgba(235,235,245,.38);
+  --glass:rgba(255,255,255,.075);
+  --glass2:rgba(255,255,255,.13);
+  --edge:rgba(255,255,255,.12);
+  --light:#F3D7A3;
+  --onlight:#1C1608;
+  --ok:#7BE0A8;
+  --warn:#FFB38A;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",system-ui,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
+  --placard:"Instrument Serif",ui-serif,Georgia,serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --spring:cubic-bezier(.32,1.25,.4,1);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--night);color:var(--ink);font:400 16px/1.45 var(--ui);-webkit-font-smoothing:antialiased;min-height:100%}
+body{overflow-x:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+img{display:block}
+:focus-visible{outline:2px solid var(--light);outline-offset:3px;border-radius:10px}
+
+/* The room: the TV's wallpaper, blurred, behind everything */
+#ambient{position:fixed;inset:-10%;z-index:0;background:var(--night) center/cover no-repeat;filter:blur(60px) saturate(1.4) brightness(.55);transform:scale(1.1);transition:background-image 1.2s var(--ease),opacity 1.2s}
+#ambient::after{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(11,16,32,.35),rgba(11,16,32,.82) 55%,var(--night))}
+
+.app{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:100vh}
+main{padding:calc(var(--safe-t) + 14px) 18px calc(110px + var(--safe-b));max-width:1180px;width:100%;min-width:0;margin:0 auto}
+
+/* Navigation: a glass tab bar on phones, a column on wide screens */
+nav.tabs{position:fixed;z-index:20;left:50%;bottom:calc(12px + var(--safe-b));transform:translateX(-50%);display:flex;gap:2px;padding:6px;border-radius:999px;
+  background:rgba(28,30,40,.55);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);border:1px solid var(--edge);box-shadow:0 20px 50px rgba(0,0,0,.45)}
+nav.tabs{width:min(calc(100% - 24px),440px)}
+nav.tabs button{flex:1;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 6px;border-radius:999px;color:var(--ink3);font-size:11px;font-weight:600;letter-spacing:.01em;transition:color .25s,background .25s}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--ink);background:rgba(255,255,255,.12)}
+.brand{display:none}
+@media (min-width:980px){
+  .app{grid-template-columns:240px minmax(0,1fr)}
+  nav.tabs{width:auto;position:sticky;top:0;left:auto;bottom:auto;transform:none;height:100vh;flex-direction:column;border-radius:0;padding:28px 14px;gap:4px;background:rgba(10,13,24,.35);border:0;border-right:1px solid var(--edge);box-shadow:none}
+  nav.tabs button{flex:none;flex-direction:row;gap:12px;min-width:0;padding:11px 14px;border-radius:12px;font-size:15px;font-weight:550;justify-content:flex-start}
+  nav.tabs button svg{width:22px;height:22px}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 10px 26px;font:700 20px var(--display);letter-spacing:-.01em}
+  .brand i{width:30px;height:30px;border-radius:9px;background:url(/icon.png) center/cover}
+  main{padding:40px 44px 60px}
+}
+
+/* Type */
+h1.large{font:700 34px/1.1 var(--display);letter-spacing:-.025em;margin:8px 0 4px}
+.sub{color:var(--ink2);margin:0 0 22px;font-size:15px}
+h2{font:650 21px/1.2 var(--display);letter-spacing:-.015em;margin:34px 0 12px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h2 small{font:500 14px var(--ui);color:var(--ink2);letter-spacing:0}
+.placard{font:italic 400 26px/1.15 var(--placard);letter-spacing:.005em}
+
+/* The miniature TV: the one bold element */
+.tv{position:relative;margin:6px auto 0;max-width:760px}
+.tv .screen{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#05070d;
+  box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 0 7px #0a0b0f,0 0 0 8px rgba(255,255,255,.08),0 40px 90px -20px rgba(0,0,0,.85),0 0 120px -30px var(--glow,rgba(243,215,163,.25))}
+.tv .screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.6s var(--ease),transform 9s linear;transform:scale(1.04)}
+.tv .screen img.on{opacity:1;transform:scale(1)}
+.tv .screen::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.10),rgba(255,255,255,0) 38%);pointer-events:none}
+.tv .clock{position:absolute;left:5%;bottom:8%;font:200 clamp(30px,8vw,64px)/1 var(--display);letter-spacing:-.02em;text-shadow:0 2px 24px rgba(0,0,0,.45)}
+.tv .clock small{display:block;font:500 clamp(10px,2.2vw,15px) var(--ui);letter-spacing:.02em;margin-top:6px;opacity:.85}
+.tv .cap{position:absolute;right:5%;bottom:8%;text-align:right;max-width:46%;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+.tv .cap b{display:block;font:italic 400 clamp(15px,3.4vw,24px)/1.1 var(--placard)}
+.tv .cap span{font-size:clamp(9px,1.8vw,12px);opacity:.8}
+.tv .stand{width:22%;height:10px;margin:14px auto 0;border-radius:0 0 10px 10px;background:linear-gradient(#1b1d24,#0c0d11);box-shadow:0 18px 30px rgba(0,0,0,.6)}
+.tv .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink3);font-size:14px}
+
+.status{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px 0 0}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);font-size:13px;color:var(--ink2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+
+.actions{display:flex;gap:10px;justify-content:center;margin:20px 0 0;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 22px;border-radius:999px;font-weight:620;font-size:16px;background:var(--glass2);border:1px solid var(--edge);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:transform .15s var(--ease),background .2s}
+.btn:active{transform:scale(.96)}
+.btn.primary{background:var(--light);color:var(--onlight);border-color:transparent;box-shadow:0 10px 30px -8px rgba(243,215,163,.55)}
+.btn.small{height:38px;padding:0 16px;font-size:14px}
+.btn.danger{color:#FF8A80}
+.btn svg{width:20px;height:20px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+
+/* Grouped settings, iOS style */
+.group{border-radius:18px;background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);overflow:hidden}
+.row{display:flex;align-items:center;gap:14px;min-height:56px;padding:10px 16px}
+.row+.row{border-top:1px solid rgba(255,255,255,.07)}
+.row .label{flex:1;min-width:0}
+.row .label b{display:block;font-weight:560}
+.row .label span{display:block;font-size:13px;color:var(--ink2)}
+.seg{display:flex;padding:3px;border-radius:12px;background:rgba(0,0,0,.28);gap:2px;flex-wrap:wrap}
+.seg button{padding:7px 12px;border-radius:9px;font-size:14px;font-weight:560;color:var(--ink2);transition:background .2s,color .2s}
+.seg button[aria-pressed="true"]{background:rgba(255,255,255,.18);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.switch{position:relative;width:51px;height:31px;border-radius:999px;background:rgba(120,120,128,.36);transition:background .25s;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.3);transition:transform .3s var(--spring)}
+.switch[aria-checked="true"]{background:var(--ok)}
+.switch[aria-checked="true"]::after{transform:translateX(20px)}
+.row.stack{flex-direction:column;align-items:stretch}
+.row>svg{width:18px;height:18px;color:var(--ink3);flex:none}
+button.row{width:100%;text-align:left;color:inherit}
+
+/* Chips (collections) */
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;margin:0 -18px;padding-left:18px;padding-right:18px}
+.chips::-webkit-scrollbar{display:none}
+@media (min-width:980px){.chips{margin:0;padding-left:2px;flex-wrap:wrap}}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);font-size:14px;font-weight:560;color:var(--ink2);white-space:nowrap;transition:background .2s,color .2s}
+.chip[aria-pressed="true"]{background:var(--ink);color:#111;border-color:transparent}
+.chip em{font-style:normal;opacity:.6;font-weight:500}
+
+/* Themes: big cover rail */
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,62%);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -18px;padding:4px 18px 10px}
+.rail::-webkit-scrollbar{display:none}
+@media (min-width:700px){.rail{grid-auto-columns:300px}}
+.theme{position:relative;scroll-snap-align:start;aspect-ratio:4/3;border-radius:20px;overflow:hidden;text-align:left;background:#111}
+.theme img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .8s var(--ease)}
+.theme:hover img{transform:scale(1.04)}
+.theme::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.7))}
+.theme .name{position:absolute;left:16px;bottom:14px;z-index:1}
+.theme .name b{display:block;font:italic 400 30px/1 var(--placard)}
+.theme .name span{font-size:13px;color:rgba(255,255,255,.8)}
+.theme[aria-pressed="true"]{box-shadow:0 0 0 2px var(--light)}
+
+/* Picture grid */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (min-width:700px){.grid{grid-template-columns:repeat(3,1fr);gap:14px}}
+@media (min-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+.tile{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:rgba(255,255,255,.05);text-align:left}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s,transform .3s var(--ease)}
+.tile img.ok{opacity:1}
+.tile:active img{transform:scale(.97)}
+.tile .badge{position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(20,20,26,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.16)}
+.tile .badge svg{width:16px;height:16px}
+.tile .badge.on{background:var(--ok);color:#06210f;border-color:transparent}
+.tile .badge.busy svg{animation:spin 1s linear infinite}
+.tile.off img{filter:grayscale(1) brightness(.55)}
+.tile .tag{position:absolute;left:8px;bottom:7px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tile.sel{box-shadow:0 0 0 3px var(--light)}
+.tile .pick{position:absolute;top:7px;left:7px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.25)}
+.tile.sel .pick{background:var(--light);border-color:var(--light)}
+.tile.sel .pick::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid var(--onlight);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:14px;background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.search svg{width:18px;height:18px;color:var(--ink3);flex:none}
+.search input{flex:1;background:none;border:0;outline:0;font-size:16px;min-width:0}
+.search input::placeholder{color:var(--ink3)}
+.more{display:flex;justify-content:center;margin:22px 0}
+.note{color:var(--ink2);font-size:14px;text-align:center;padding:30px 10px}
+.credit{color:var(--ink3);font-size:12px;margin-top:22px;text-align:center}
+.credit a{color:var(--ink2)}
+
+/* Sheets */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s;pointer-events:none}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:41;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;border-radius:28px 28px 0 0;padding:10px 20px calc(24px + var(--safe-b));
+  background:rgba(24,26,36,.82);backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);border-top:1px solid var(--edge);
+  transform:translateY(105%);transition:transform .45s var(--ease),visibility 0s linear .45s}
+.sheet{visibility:hidden}
+.sheet.on{transform:none;visibility:visible;transition:transform .45s var(--ease),visibility 0s}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:0 auto 14px}
+@media (min-width:760px){.sheet{left:50%;right:auto;bottom:auto;top:50%;width:min(720px,92vw);border-radius:28px;border:1px solid var(--edge);transform:translate(-50%,-46%) scale(.96);opacity:0;transition:transform .4s var(--ease),opacity .3s,visibility 0s linear .4s}
+  .sheet.on{transform:translate(-50%,-50%);opacity:1;visibility:visible;transition:transform .4s var(--ease),opacity .3s,visibility 0s}.sheet .grab{display:none}}
+.sheet .tv{margin:6px 0 18px}
+.sheet .meta{color:var(--ink2);font-size:14px;margin:6px 0 0}
+.sheet .meta a{color:var(--ink2)}
+.sheet h3{font:650 15px var(--ui);color:var(--ink2);margin:22px 0 10px}
+.sheet .bar{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.sheet .bar .btn{flex:1 1 180px;white-space:nowrap}
+.close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.close svg{width:16px;height:16px}
+
+/* Crop: a 16:9 window over the photo */
+.crop{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;touch-action:none;cursor:grab;margin:8px 0 6px}
+.crop img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.crop .guide{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.18) 1px,transparent 1px);background-size:33.34% 33.34%;opacity:0;transition:opacity .2s}
+.crop.drag .guide{opacity:1}
+.hint{font-size:13px;color:var(--ink3);text-align:center}
+.queue{display:flex;gap:8px;overflow-x:auto;margin:12px 0 0}
+.queue button{flex:none;width:72px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;opacity:.55;position:relative}
+.queue button img{width:100%;height:100%;object-fit:cover}
+.queue button[aria-current="true"]{opacity:1;box-shadow:0 0 0 2px var(--light)}
+.queue button.done::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);font-weight:700;color:var(--ok)}
+.progress{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:14px}
+.progress i{display:block;height:100%;width:0;background:var(--light);transition:width .3s}
+
+/* Remote */
+.remote{max-width:420px;margin:0 auto}
+.pad{position:relative;aspect-ratio:1;border-radius:36px;margin:8px auto 18px;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,.14),rgba(255,255,255,.04));border:1px solid var(--edge);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);touch-action:none;user-select:none;overflow:hidden}
+.pad .ring{position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
+.pad .arrow{position:absolute;width:56px;height:56px;display:grid;place-items:center;color:var(--ink3)}
+.pad .arrow svg{width:26px;height:26px}
+.pad .up{top:4%;left:50%;transform:translateX(-50%)}.pad .down{bottom:4%;left:50%;transform:translateX(-50%)}
+.pad .left{left:4%;top:50%;transform:translateY(-50%)}.pad .right{right:4%;top:50%;transform:translateY(-50%)}
+.pad .center{position:absolute;inset:32%;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-weight:600;color:var(--ink2);font-size:15px}
+.pad .ripple{position:absolute;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;background:rgba(255,255,255,.22);transform:scale(0);opacity:1;pointer-events:none;animation:rip .5s var(--ease) forwards}
+@keyframes rip{to{transform:scale(2.4);opacity:0}}
+.pad .hint{position:absolute;bottom:14%;left:0;right:0}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.key{height:64px;border-radius:20px;background:var(--glass);border:1px solid var(--edge);display:grid;place-items:center;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:transform .12s,background .2s}
+.key:active{transform:scale(.93);background:var(--glass2)}
+.key svg{width:24px;height:24px}
+.key.tall{grid-row:span 2;height:auto}
+.vol{display:grid;grid-template-rows:1fr 1fr;border-radius:20px;overflow:hidden;grid-row:span 2;background:var(--glass);border:1px solid var(--edge)}
+.vol button{display:grid;place-items:center}.vol button+button{border-top:1px solid rgba(255,255,255,.08)}
+.vol button svg{width:22px;height:22px}
+.type{display:flex;gap:8px;margin:18px 0 0}
+.type .search{min-width:0}
+.apps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (min-width:700px){.apps{grid-template-columns:repeat(5,1fr)}}
+.app-tile{aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.06);border:1px solid var(--edge);position:relative;display:grid;place-items:center;font-size:13px;color:var(--ink2);padding:6px;text-align:center}
+.app-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.app-tile:active{transform:scale(.95)}
+
+/* Pairing */
+.pair{min-height:100vh;display:grid;place-items:center;padding:30px 22px;text-align:center}
+.pair .card{max-width:440px}
+.pair .glyph{width:120px;height:120px;margin:0 auto 22px;border-radius:30px;background:url(/icon.png) center/cover;box-shadow:0 30px 60px -18px rgba(0,0,0,.8)}
+.pair ol{text-align:left;color:var(--ink2);padding-left:22px;margin:22px auto;max-width:330px}
+.pair ol li{margin:8px 0}
+.pair ol b{color:var(--ink)}
+
+.toast{position:fixed;z-index:60;left:50%;top:calc(14px + var(--safe-t));transform:translate(-50%,-140%);padding:12px 18px;border-radius:16px;background:rgba(30,32,42,.86);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--edge);font-size:15px;font-weight:550;box-shadow:0 18px 40px rgba(0,0,0,.4);transition:transform .45s var(--spring),visibility 0s linear .45s;max-width:min(92vw,520px);display:flex;gap:10px;align-items:center}
+.toast{visibility:hidden}
+.toast.on{transform:translate(-50%,0);visibility:visible;transition:transform .45s var(--spring),visibility 0s}
+.toast.bad{color:var(--warn)}
+.selbar{position:fixed;z-index:30;left:50%;bottom:calc(88px + var(--safe-b));transform:translate(-50%,180%);display:flex;gap:6px;padding:8px;border-radius:999px;background:rgba(28,30,40,.75);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--edge);transition:transform .4s var(--spring);box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.selbar{visibility:hidden;opacity:0}
+.selbar.on{transform:translate(-50%,0);visibility:visible;opacity:1}
+@media (min-width:980px){.selbar{bottom:28px;margin-left:120px}}
+.view{animation:in .5s var(--ease)}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="ambient"></div>
+<div id="root" style="position:relative;z-index:1"></div>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="files" accept="image/*" multiple class="sr">
+
+<script>
+"use strict";
+/* MaTV Connect — the TV's web app. Talks only to the TV that served it (same origin); the online library comes from
+   Wikimedia Commons (an index of featured pictures kept on GitHub, and Commons' own search). */
+
+const LIBRARY_URL = "https://raw.githubusercontent.com/Torkor29/MaTVXiao/main/library/index.json";
+const COMMONS = "https://commons.wikimedia.org/w/api.php";
+
+/* ---------- Icons (drawn for this app, 24px grid) ---------- */
+const I = {
+  tv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20h8M12 16.5V20"/></svg>',
+  discover:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5.5-7 4 5 2.5-3 6 5"/><circle cx="16.5" cy="7.5" r="2"/><rect x="2.5" y="3.5" width="19" height="17" rx="3"/></svg>',
+  library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg>',
+  remote:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="5"/><circle cx="12" cy="8" r="2.2"/><path d="M10 14h4M10 17h4"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  spin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3a9 9 0 1 1-9 9"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  cast:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M9.5 10.25l5 0M12 7.75v5"/><path d="M8 20h8"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  left:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12" transform="translate(0 -6)"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>',
+  pp:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5.5v13l8-6.5zM14 5h2.5v14H14zM18.5 5H21v14h-2.5z"/></svg>',
+  mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+  volup:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>',
+  voldown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 12h12"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M10 11v6M14 11v6M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5h6V7"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
+};
+
+/* ---------- State ---------- */
+const S = {
+  token: null, hello: null, state: null, lib: null, filter: "all",
+  index: null, theme: null, shown: 36, search: null, searching: false,
+  adding: new Set(), selecting: false, selected: new Set(), apps: null, view: "tv",
+};
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => n.toLocaleString("fr-FR");
+
+/* ---------- The TV's API ---------- */
+async function api(path, opts = {}) {
+  const headers = Object.assign({}, opts.headers || {});
+  if (S.token) headers.Authorization = "Bearer " + S.token;
+  if (opts.json !== undefined) { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(opts.json); }
+  let res;
+  try { res = await fetch(path, {method: opts.method || (opts.body ? "POST" : "GET"), headers, body: opts.body}); }
+  catch (e) { throw new Error("La TV ne répond pas. Elle est peut-être éteinte, ou sur un autre Wi‑Fi."); }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (res.status === 401) { forget(); throw new Error(data.error || "Ce téléphone n'est plus connecté."); }
+  if (!res.ok || data.ok === false) throw new Error(data.error || ("Erreur " + res.status));
+  return data;
+}
+const img = id => `/img/${encodeURIComponent(id)}?t=${encodeURIComponent(S.token)}`;
+const full = id => img(id) + "&s=full";
+
+function forget() { try { localStorage.removeItem("matv.k"); } catch (e) {} S.token = null; renderPair(); }
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg, bad) {
+  const t = $("#toast");
+  t.className = "toast" + (bad ? " bad" : "");
+  t.innerHTML = (bad ? "" : `<span style="color:var(--ok);width:18px;display:inline-grid">${I.check}</span>`) + esc(msg);
+  requestAnimationFrame(() => t.classList.add("on"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("on"), bad ? 4200 : 2400);
+}
+const buzz = () => { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} };
+
+/* ---------- Ambient light: the room takes the colour of what the TV shows ---------- */
+function ambient(url) { if (url) $("#ambient").style.backgroundImage = `url("${url}")`; }
+
+/* ---------- Boot ---------- */
+async function boot() {
+  const m = location.hash.match(/k=([A-Za-z0-9_-]{20,})/);
+  if (m) { try { localStorage.setItem("matv.k", m[1]); } catch (e) {} S.token = m[1]; history.replaceState(null, "", location.pathname); }
+  else { try { S.token = localStorage.getItem("matv.k"); } catch (e) {} }
+  if (!S.token) return renderPair();
+  try {
+    S.hello = await api("/api/hello");
+    if (!S.hello.paired) return forget();
+    await Promise.all([loadState(), loadLib()]);
+  } catch (e) { if (S.token) return renderOffline(e.message); return; }
+  renderShell();
+  go(location.hash.replace("#", "") || "tv");
+  loadIndex();
+}
+async function loadState() { S.state = await api("/api/state"); }
+async function loadLib() { S.lib = await api("/api/wallpapers"); }
+
+function renderPair() {
+  $("#root").innerHTML = `<div class="pair view"><div class="card">
+    <div class="glyph" aria-hidden="true"></div>
+    <h1 class="large">Connecte ton téléphone</h1>
+    <p class="sub">Pour gérer tes fonds d'écran et piloter la TV d'ici.</p>
+    <ol>
+      <li>Sur la TV, ouvre <b>Réglages</b>.</li>
+      <li>Va dans <b>Téléphone</b>.</li>
+      <li>Scanne le QR code avec l'appareil photo de ce téléphone.</li>
+    </ol>
+    <p class="hint">Le téléphone doit être sur le même Wi‑Fi que la TV.</p></div></div>`;
+}
+function renderOffline(msg) {
+  $("#root").innerHTML = `<div class="pair view"><div class="card">
+    <div class="glyph" aria-hidden="true"></div>
+    <h1 class="large">TV injoignable</h1>
+    <p class="sub">${esc(msg)}</p>
+    <div class="actions"><button class="btn primary" onclick="location.reload()">Réessayer</button></div></div></div>`;
+}
+
+const TABS = [["tv", "Ma TV", I.tv], ["discover", "Découvrir", I.discover], ["library", "Mes fonds", I.library], ["remote", "Télécommande", I.remote]];
+function renderShell() {
+  $("#root").innerHTML = `<div class="app">
+    <nav class="tabs" aria-label="Sections">
+      <div class="brand"><i></i>MaTV</div>
+      ${TABS.map(([id, name, icon]) => `<button data-go="${id}">${icon}<span>${name}</span></button>`).join("")}
+    </nav>
+    <main id="main"></main></div>
+    <div class="selbar" id="selbar"></div>`;
+  document.addEventListener("click", onClick);
+}
+function go(view) {
+  if (!TABS.some(t => t[0] === view)) view = "tv";
+  S.view = view; S.selecting = false; S.selected.clear();
+  history.replaceState(null, "", "#" + view);
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.go === view ? "page" : "false"));
+  render();
+  scrollTo({top: 0});
+}
+function render() {
+  const main = $("#main");
+  if (!main) return;
+  main.innerHTML = `<div class="view">${({tv: viewTv, discover: viewDiscover, library: viewLibrary, remote: viewRemote})[S.view]()}</div>`;
+  after[S.view] && after[S.view]();
+  selbar();
+}
+const after = {};
+
+/* ---------- Helpers for the library ---------- */
+const cols = () => (S.lib && S.lib.collections) || [];
+const colName = id => id === "all" ? "Toutes" : ((cols().find(c => c.id === id) || {}).name || "—");
+const items = () => (S.lib && S.lib.items) || [];
+const inRotation = () => items().filter(w => w.enabled && (S.state.saver.collection === "all" || w.collection === S.state.saver.collection));
+const remoteIds = () => new Set(items().map(w => w.remote).filter(Boolean));
+
+/* ---------- The miniature TV ---------- */
+function tvFrame(opts = {}) {
+  const saver = S.state.saver;
+  const d = new Date();
+  const time = d.toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit"});
+  const date = d.toLocaleDateString("fr-FR", {weekday: "long", day: "numeric", month: "long"});
+  return `<div class="tv" ${opts.id ? `id="${opts.id}"` : ""}><div class="screen">
+      ${opts.src ? `<img class="on" src="${esc(opts.src)}" alt="">` : `<div class="empty">Aucun fond dans cette collection</div>`}
+      ${saver.clock ? `<div class="clock">${time}<small>${esc(date)}</small></div>` : ""}
+      ${saver.caption && opts.title ? `<div class="cap"><b>${esc(opts.title)}</b><span>${esc(opts.credit || "")}</span></div>` : ""}
+    </div><div class="stand"></div></div>`;
+}
+
+/* ---------- Ma TV ---------- */
+let slideTimer;
+function viewTv() {
+  const s = S.state, saver = s.saver, list = inRotation();
+  const first = list[0];
+  const secs = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [180, "3 min"], [600, "10 min"]];
+  return `
+  <h1 class="large">Ma TV</h1>
+  <p class="sub">${esc(s.tv.brand || "")} ${esc(s.tv.model)} · MaTV ${esc(s.tv.version)}</p>
+  ${tvFrame({id: "hero", src: first ? full(first.id) : null, title: first && first.title, credit: first && first.credit})}
+  <div class="status">
+    <span class="pill"><span class="dot"></span>Connectée</span>
+    <span class="pill">${saver.mode === "art" ? "Fonds d'écran" : "Suggestions"}${saver.mode === "art" ? " · " + esc(colName(saver.collection)) : ""}</span>
+    <span class="pill">${fmt(list.length)} en rotation</span>
+  </div>
+  <div class="actions">
+    <button class="btn primary" data-act="show">${I.play}Lancer sur la TV</button>
+  </div>
+
+  <h2>Écran de veille</h2>
+  <div class="group">
+    <div class="row"><div class="label"><b>Contenu</b><span>Ce que la TV montre quand elle se repose</span></div>
+      <div class="seg" role="group">${[["art", "Fonds"], ["picks", "Suggestions"]].map(([v, l]) => `<button data-set="mode" data-v="${v}" aria-pressed="${saver.mode === v}">${l}</button>`).join("")}</div></div>
+    <div class="row stack"><div class="label"><b>Collection</b><span>Les fonds qui défilent</span></div>
+      <div class="chips" style="margin-top:8px">${[{id: "all", name: "Toutes"}, ...cols()].map(c => `<button class="chip" data-set="collection" data-v="${esc(c.id)}" aria-pressed="${saver.collection === c.id}">${esc(c.name)}</button>`).join("")}</div></div>
+    <div class="row stack"><div class="label"><b>Durée de chaque image</b></div>
+      <div class="seg" style="margin-top:8px;align-self:flex-start">${secs.map(([v, l]) => `<button data-set="seconds" data-v="${v}" aria-pressed="${saver.seconds === v}">${l}</button>`).join("")}</div></div>
+    <div class="row"><div class="label"><b>Horloge</b><span>L'heure et la date sur l'image</span></div>
+      <button class="switch" role="switch" data-set="clock" aria-checked="${saver.clock}" aria-label="Horloge"></button></div>
+    <div class="row"><div class="label"><b>Légende</b><span>Le titre et l'auteur de l'image</span></div>
+      <button class="switch" role="switch" data-set="caption" aria-checked="${saver.caption}" aria-label="Légende"></button></div>
+  </div>
+  <h2>Bibliothèque <small>${fmt(s.library.count)} sur ${fmt(s.library.max)}</small></h2>
+  <div class="group">
+    <button class="row" style="width:100%;text-align:left" data-go="discover"><div class="label"><b>Découvrir des fonds en 4K</b><span>Paysages, villes, art : des milliers de photos libres</span></div>${I.right}</button>
+    <button class="row" style="width:100%;text-align:left" data-act="import"><div class="label"><b>Importer mes photos</b><span>Depuis ce téléphone, recadrées pour la TV</span></div>${I.right}</button>
+  </div>`;
+}
+after.tv = () => {
+  const list = inRotation();
+  if (list[0]) ambient(img(list[0].id));
+  clearInterval(slideTimer);
+  if (list.length < 2) return;
+  let i = 0;
+  slideTimer = setInterval(() => {
+    const scr = $("#hero .screen");
+    if (!scr || S.view !== "tv") return clearInterval(slideTimer);
+    i = (i + 1) % list.length;
+    const w = list[i], im = new Image();
+    im.onload = () => {
+      const old = scr.querySelectorAll("img");
+      scr.insertBefore(im, scr.firstChild.nextSibling || null);
+      requestAnimationFrame(() => { im.classList.add("on"); old.forEach(o => o.classList.remove("on")); });
+      setTimeout(() => old.forEach(o => o.remove()), 1800);
+      const cap = scr.querySelector(".cap");
+      if (cap) cap.innerHTML = `<b>${esc(w.title)}</b><span>${esc(w.credit)}</span>`;
+      ambient(img(w.id));
+    };
+    im.src = full(w.id);
+  }, 6000);
+};
+
+/* ---------- Découvrir: the online library ---------- */
+async function loadIndex() {
+  for (const url of [LIBRARY_URL, "/library.json"]) {
+    try {
+      const r = await fetch(url, {cache: "no-cache"});
+      if (!r.ok) continue;
+      S.index = await r.json();
+      if (!S.theme && S.index.themes && S.index.themes.length) S.theme = S.index.themes[0].id;
+      if (S.view === "discover") render();
+      return;
+    } catch (e) {}
+  }
+  S.index = {themes: []};
+  if (S.view === "discover") render();
+}
+const themeItems = () => S.search ? S.search.items : (((S.index && S.index.themes) || []).find(t => t.id === S.theme) || {items: []}).items;
+
+function viewDiscover() {
+  const themes = (S.index && S.index.themes) || [];
+  const have = remoteIds();
+  const list = themeItems();
+  const tiles = list.slice(0, S.shown).map((p, n) => {
+    const key = "commons:" + p.id, on = have.has(key), busy = S.adding.has(key);
+    return `<button class="tile" data-pick="${n}" aria-label="${esc(p.t)}">
+      <img loading="lazy" src="${esc(p.th)}" alt="" onload="this.classList.add('ok')">
+      <span class="badge ${on ? "on" : busy ? "busy" : ""}" data-quick="${n}" aria-label="${on ? "Déjà sur la TV" : "Ajouter à la TV"}">${on ? I.check : busy ? I.spin : I.plus}</span>
+    </button>`;
+  }).join("");
+  return `
+  <h1 class="large">Découvrir</h1>
+  <p class="sub">Des photos et des tableaux en haute définition, libres de droits. Touche + pour les envoyer sur la TV.</p>
+  <div class="toolbar"><label class="search">${I.search}<input id="q" type="search" enterkeyhint="search" placeholder="Rechercher : Islande, aurores, Venise…" value="${esc(S.search ? S.search.q : "")}"></label>
+    ${S.search ? `<button class="btn small" data-act="clear">Thèmes</button>` : ""}</div>
+  ${S.search ? "" : `<div class="rail" role="list">${themes.map(t => `<button class="theme" role="listitem" data-theme="${esc(t.id)}" aria-pressed="${t.id === S.theme}">
+      <img loading="lazy" src="${esc((t.items[t.cover || 0] || t.items[0] || {}).th || "")}" alt="">
+      <span class="name"><b>${esc(t.name)}</b><span>${fmt(t.items.length)} images</span></span></button>`).join("")}</div>`}
+  <h2>${S.search ? `« ${esc(S.search.q)} »` : esc((themes.find(t => t.id === S.theme) || {}).name || "")} <small>${S.searching ? "Recherche…" : fmt(list.length) + " images"}</small></h2>
+  ${!S.index ? `<p class="note">Chargement de la bibliothèque…</p>` : list.length ? `<div class="grid">${tiles}</div>` : `<p class="note">${S.searching ? "Recherche…" : "Aucune image en paysage assez grande pour cette recherche. Essaie un autre mot, en anglais par exemple."}</p>`}
+  ${list.length > S.shown ? `<div class="more"><button class="btn" data-act="more">Voir plus</button></div>` : ""}
+  <p class="credit">Images de <a href="https://commons.wikimedia.org" target="_blank" rel="noreferrer">Wikimedia Commons</a>, sous licence libre. L'auteur et la licence restent avec chaque image.</p>`;
+}
+after.discover = () => {
+  const q = $("#q");
+  if (q) q.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); q.blur(); searchCommons(q.value.trim()); } });
+  const sel = $(".theme[aria-pressed=true]");
+  if (sel) sel.scrollIntoView({inline: "nearest", block: "nearest"});
+};
+
+async function searchCommons(q) {
+  if (!q) { S.search = null; return render(); }
+  S.search = {q, items: []}; S.searching = true; S.shown = 36; render();
+  const p = new URLSearchParams({action: "query", format: "json", origin: "*", generator: "search", gsrsearch: q + " filetype:bitmap",
+    gsrnamespace: "6", gsrlimit: "120", prop: "imageinfo", iiprop: "url|size|mime|extmetadata", iiurlwidth: "960",
+    iiextmetadatafilter: "ObjectName|Artist|LicenseShortName"});
+  try {
+    const r = await fetch(COMMONS + "?" + p);
+    const d = await r.json();
+    const pages = Object.values((d.query && d.query.pages) || {}).sort((a, b) => a.index - b.index);
+    const strip = s => { const t = document.createElement("div"); t.innerHTML = s || ""; return t.textContent.trim().replace(/\s+/g, " "); };
+    S.search.items = pages.map(pg => {
+      const ii = (pg.imageinfo || [])[0] || {}, m = ii.extmetadata || {};
+      if (ii.mime !== "image/jpeg" || ii.width < 2400 || ii.width / ii.height < 1.3 || ii.width / ii.height > 2.3 || !/\/960px-/.test(ii.thumburl || "")) return null;
+      return {id: pg.pageid, t: (strip(m.ObjectName && m.ObjectName.value) || pg.title.slice(5).replace(/\.[^.]+$/, "")).slice(0, 90),
+        a: strip(m.Artist && m.Artist.value).slice(0, 70), l: strip(m.LicenseShortName && m.LicenseShortName.value), w: ii.width, h: ii.height,
+        th: ii.thumburl, u: ii.width <= 3840 ? ii.url : ii.thumburl.replace("/960px-", "/3840px-"),
+        p: "https://commons.wikimedia.org/wiki/" + encodeURIComponent(pg.title.replace(/ /g, "_"))};
+    }).filter(Boolean);
+  } catch (e) { toast("Recherche impossible pour l'instant.", true); }
+  S.searching = false;
+  if (S.view === "discover") render();
+}
+
+async function addPick(p, collection, thenShow) {
+  const key = "commons:" + p.id;
+  if (S.adding.has(key)) return;
+  if (remoteIds().has(key)) { if (thenShow) { const w = items().find(w => w.remote === key); if (w) return showOnTv(w.id); } return toast("Déjà sur la TV"); }
+  S.adding.add(key); refreshDiscover();
+  try {
+    const r = await api("/api/add", {json: {url: p.u, title: p.t, credit: p.a, license: p.l, link: p.p, remote: key, source: "commons", collection}});
+    S.lib.items.unshift(r.item);
+    S.state.library.count++;
+    toast(`Ajouté à ${colName(r.item.collection)}`);
+    if (thenShow) showOnTv(r.item.id);
+  } catch (e) { toast(e.message, true); }
+  S.adding.delete(key); refreshDiscover();
+}
+function refreshDiscover() {
+  if (S.view !== "discover") return;
+  const have = remoteIds(), list = themeItems();
+  document.querySelectorAll("[data-quick]").forEach(b => {
+    const p = list[+b.dataset.quick]; if (!p) return;
+    const key = "commons:" + p.id, on = have.has(key), busy = S.adding.has(key);
+    b.className = "badge " + (on ? "on" : busy ? "busy" : "");
+    b.innerHTML = on ? I.check : busy ? I.spin : I.plus;
+  });
+}
+function defaultCollection() {
+  const t = S.search ? null : S.theme;
+  if (t === "paintings") return (cols().find(c => c.id === "art") || cols()[0] || {}).id;
+  return (cols().find(c => c.id === "landscape") || cols()[0] || {}).id;
+}
+
+function sheetPick(p) {
+  let target = defaultCollection();
+  const on = remoteIds().has("commons:" + p.id);
+  const mp = (p.w * p.h / 1e6).toFixed(0);
+  openSheet(`
+    ${tvFrame({src: p.u.replace("/3840px-", "/1920px-"), title: p.t, credit: p.a})}
+    <div class="placard">${esc(p.t)}</div>
+    <p class="meta">${esc(p.a || "Auteur inconnu")}${p.l ? " · " + esc(p.l) : ""} · ${fmt(p.w)} × ${fmt(p.h)} (${mp} Mpx) · <a href="${esc(p.p)}" target="_blank" rel="noreferrer">Source</a></p>
+    ${on ? "" : `<h3>Ranger dans</h3><div class="chips" id="dest">${cols().map(c => `<button class="chip" data-dest="${esc(c.id)}" aria-pressed="${c.id === target}">${esc(c.name)}</button>`).join("")}</div>`}
+    <div class="bar">
+      <button class="btn primary" id="addshow">${I.play}${on ? "Afficher sur la TV" : "Ajouter et afficher"}</button>
+      ${on ? "" : `<button class="btn" id="addonly">${I.plus}Ajouter</button>`}
+    </div>`, sh => {
+    sh.querySelectorAll("[data-dest]").forEach(b => b.onclick = () => { target = b.dataset.dest; sh.querySelectorAll("[data-dest]").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+    $("#addshow", sh).onclick = () => { closeSheet(); addPick(p, target, true); };
+    const ao = $("#addonly", sh); if (ao) ao.onclick = () => { closeSheet(); addPick(p, target, false); };
+  });
+}
+
+/* ---------- Mes fonds: what's on the TV ---------- */
+function viewLibrary() {
+  const list = items().filter(w => S.filter === "all" || w.collection === S.filter);
+  const counts = {}; items().forEach(w => counts[w.collection] = (counts[w.collection] || 0) + 1);
+  return `
+  <h1 class="large">Mes fonds</h1>
+  <p class="sub">${fmt(items().length)} sur la TV · ${fmt(inRotation().length)} en rotation</p>
+  <div class="toolbar">
+    <button class="btn primary small" data-act="import">${I.upload}Importer</button>
+    <button class="btn small" data-act="select">${S.selecting ? "Terminé" : "Sélectionner"}</button>
+  </div>
+  <div class="chips">${[{id: "all", name: "Toutes"}, ...cols()].map(c => `<button class="chip" data-filter="${esc(c.id)}" aria-pressed="${S.filter === c.id}">${esc(c.name)} <em>${fmt(c.id === "all" ? items().length : counts[c.id] || 0)}</em></button>`).join("")}<button class="chip" data-act="newcol" aria-label="Nouvelle collection">${I.plus.replace('<svg', '<svg width="16" height="16"')}Collection</button></div>
+  ${S.filter !== "all" ? `<p style="margin:4px 0 14px;display:flex;gap:8px"><button class="btn small" data-act="rencol">Renommer</button><button class="btn small danger" data-act="delcol">Supprimer la collection</button></p>` : `<div style="height:14px"></div>`}
+  ${list.length ? `<div class="grid">${list.map(w => `<button class="tile ${w.enabled ? "" : "off"} ${S.selected.has(w.id) ? "sel" : ""}" data-wall="${esc(w.id)}" aria-label="${esc(w.title || "Fond")}">
+      <img loading="lazy" src="${img(w.id)}" alt="" onload="this.classList.add('ok')">
+      ${S.selecting ? `<span class="pick"></span>` : ""}
+      ${w.enabled ? "" : `<span class="tag">Hors rotation</span>`}
+    </button>`).join("")}</div>` : `<p class="note">Cette collection est vide. Ajoute des fonds depuis Découvrir, ou importe tes photos.</p>`}`;
+}
+after.library = () => { const f = items().find(w => S.filter === "all" || w.collection === S.filter); if (f) ambient(img(f.id)); };
+
+function selbar() {
+  const bar = $("#selbar"); if (!bar) return;
+  const on = S.view === "library" && S.selecting;
+  bar.classList.toggle("on", on && S.selected.size > 0);
+  if (!on) return;
+  bar.innerHTML = `<span class="pill" style="border:0;background:none">${fmt(S.selected.size)} choisi${S.selected.size > 1 ? "s" : ""}</span>
+    <button class="btn small" data-act="bulkmove">${I.folder}Déplacer</button>
+    <button class="btn small" data-act="bulkrot">${I.eye}Rotation</button>
+    <button class="btn small danger" data-act="bulkdel">${I.trash}Supprimer</button>`;
+}
+
+function sheetWall(w) {
+  openSheet(`
+    ${tvFrame({src: full(w.id), title: w.title, credit: w.credit})}
+    <div class="placard">${esc(w.title || "Sans titre")}</div>
+    <p class="meta">${esc(w.credit || (w.source === "phone" ? "Importé depuis un téléphone" : ""))}${w.license ? " · " + esc(w.license) : ""}${w.link ? ` · <a href="${esc(w.link)}" target="_blank" rel="noreferrer">Source</a>` : ""}</p>
+    <div class="group" style="margin-top:18px">
+      <div class="row"><div class="label"><b>Dans la rotation</b><span>Montré par l'écran de veille</span></div>
+        <button class="switch" role="switch" id="rot" aria-checked="${w.enabled}" aria-label="Dans la rotation"></button></div>
+      <div class="row stack"><div class="label"><b>Collection</b></div>
+        <div class="chips" style="margin-top:8px">${cols().map(c => `<button class="chip" data-mv="${esc(c.id)}" aria-pressed="${c.id === w.collection}">${esc(c.name)}</button>`).join("")}</div></div>
+    </div>
+    <div class="bar">
+      <button class="btn primary" id="show">${I.play}Afficher sur la TV</button>
+      <button class="btn" id="ren">Renommer</button>
+      <button class="btn danger" id="del">${I.trash}Supprimer</button>
+    </div>`, sh => {
+    $("#show", sh).onclick = () => { closeSheet(); showOnTv(w.id); };
+    $("#rot", sh).onclick = async e => { const v = !w.enabled; e.currentTarget.setAttribute("aria-checked", v); await update([w.id], {enabled: v}); };
+    sh.querySelectorAll("[data-mv]").forEach(b => b.onclick = async () => { sh.querySelectorAll("[data-mv]").forEach(x => x.setAttribute("aria-pressed", x === b)); await update([w.id], {collection: b.dataset.mv}); toast("Rangé dans " + colName(b.dataset.mv)); });
+    $("#ren", sh).onclick = async () => { const t = prompt("Titre", w.title || ""); if (t === null) return; await update([w.id], {title: t}); closeSheet(); };
+    $("#del", sh).onclick = async () => { if (!confirm("Supprimer ce fond de la TV ?")) return; closeSheet(); await removeWalls([w.id]); };
+  });
+}
+async function update(ids, change) {
+  try {
+    await api("/api/update", {json: Object.assign({ids}, change)});
+    items().forEach(w => { if (ids.includes(w.id)) Object.assign(w, change); });
+    if (S.view === "library") render();
+  } catch (e) { toast(e.message, true); }
+}
+async function removeWalls(ids) {
+  try {
+    await api("/api/delete", {json: {ids}});
+    S.lib.items = items().filter(w => !ids.includes(w.id));
+    S.state.library.count = S.lib.items.length;
+    S.selected.clear(); render();
+    toast(ids.length > 1 ? `${ids.length} fonds supprimés` : "Fond supprimé");
+  } catch (e) { toast(e.message, true); }
+}
+async function showOnTv(id) {
+  try { await api("/api/show", {json: id ? {id} : {}}); toast("Affiché sur la TV"); } catch (e) { toast(e.message, true); }
+}
+
+/* ---------- Import with a 16:9 crop ---------- */
+function importPhotos() { const f = $("#files"); f.value = ""; f.onchange = () => f.files.length && sheetImport([...f.files]); f.click(); }
+
+function sheetImport(files) {
+  const jobs = files.slice(0, 30).map(f => ({file: f, url: URL.createObjectURL(f), fx: .5, fy: .5, done: false}));
+  let at = 0, dest = S.filter !== "all" ? S.filter : defaultCollection(), sending = false;
+  openSheet(`
+    <h1 class="large" style="font-size:26px;margin-top:0">Importer</h1>
+    <p class="sub" style="margin-bottom:8px">Fais glisser la photo pour choisir ce que la TV montre.</p>
+    <div class="crop" id="crop"><img id="cimg" alt=""><div class="guide"></div></div>
+    ${jobs.length > 1 ? `<div class="queue" id="queue">${jobs.map((j, n) => `<button data-q="${n}"><img src="${j.url}" alt=""></button>`).join("")}</div>` : ""}
+    <h3>Ranger dans</h3>
+    <div class="chips" id="idest">${cols().map(c => `<button class="chip" data-d="${esc(c.id)}" aria-pressed="${c.id === dest}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="progress" id="prog" hidden><i></i></div>
+    <div class="bar"><button class="btn primary" id="send">${I.upload}Envoyer ${jobs.length > 1 ? jobs.length + " photos" : "sur la TV"}</button></div>`, sh => {
+    const crop = $("#crop", sh), im = $("#cimg", sh);
+    let natW = 0, natH = 0, scale = 1;
+    function layout() {
+      const j = jobs[at], cw = crop.clientWidth, ch = crop.clientHeight;
+      scale = Math.max(cw / natW, ch / natH);
+      const w = natW * scale, h = natH * scale;
+      const left = Math.min(0, Math.max(cw - w, cw / 2 - j.fx * w)), top = Math.min(0, Math.max(ch - h, ch / 2 - j.fy * h));
+      j.fx = (cw / 2 - left) / w; j.fy = (ch / 2 - top) / h;
+      Object.assign(im.style, {width: w + "px", height: h + "px", left: left + "px", top: top + "px"});
+    }
+    function show(n) {
+      at = n; im.onload = () => { natW = im.naturalWidth; natH = im.naturalHeight; layout(); }; im.src = jobs[n].url;
+      sh.querySelectorAll("[data-q]").forEach(b => b.setAttribute("aria-current", +b.dataset.q === n));
+    }
+    let drag = null;
+    crop.addEventListener("pointerdown", e => { drag = {x: e.clientX, y: e.clientY, fx: jobs[at].fx, fy: jobs[at].fy}; crop.setPointerCapture(e.pointerId); crop.classList.add("drag"); });
+    crop.addEventListener("pointermove", e => { if (!drag) return; const j = jobs[at]; j.fx = drag.fx - (e.clientX - drag.x) / (natW * scale); j.fy = drag.fy - (e.clientY - drag.y) / (natH * scale); layout(); });
+    const end = () => { drag = null; crop.classList.remove("drag"); };
+    crop.addEventListener("pointerup", end); crop.addEventListener("pointercancel", end);
+    sh.querySelectorAll("[data-q]").forEach(b => b.onclick = () => show(+b.dataset.q));
+    sh.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { dest = b.dataset.d; sh.querySelectorAll("[data-d]").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+    $("#send", sh).onclick = async () => {
+      if (sending) return; sending = true;
+      const btn = $("#send", sh), prog = $("#prog", sh); btn.disabled = true; prog.hidden = false;
+      let ok = 0;
+      for (let n = 0; n < jobs.length; n++) {
+        const j = jobs[n];
+        btn.textContent = `Envoi ${n + 1} sur ${jobs.length}…`;
+        try {
+          const blob = await shrink(j.file);
+          const q = new URLSearchParams({collection: dest, fx: j.fx.toFixed(4), fy: j.fy.toFixed(4), title: j.file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 80)});
+          const r = await api("/api/upload?" + q, {method: "POST", body: blob, headers: {"Content-Type": "image/jpeg"}});
+          S.lib.items.unshift(r.item); ok++; j.done = true;
+          const qb = sh.querySelector(`[data-q="${n}"]`); if (qb) qb.classList.add("done");
+        } catch (e) { toast(e.message, true); }
+        $("i", prog).style.width = ((n + 1) / jobs.length * 100) + "%";
+      }
+      S.state.library.count = S.lib.items.length;
+      closeSheet(); jobs.forEach(j => URL.revokeObjectURL(j.url));
+      if (ok) { toast(ok > 1 ? `${ok} photos ajoutées` : "Photo ajoutée"); if (S.view === "library" || S.view === "tv") render(); }
+    };
+    show(0);
+  });
+}
+/* Big photos are made lighter on the phone (3840 px on the long side): faster over Wi‑Fi, same result on the TV. */
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file, {imageOrientation: "from-image"});
+    const k = Math.min(1, 3840 / Math.max(bmp.width, bmp.height));
+    if (k === 1 && file.type === "image/jpeg" && file.size < 12e6) { bmp.close && bmp.close(); return file; }
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height); bmp.close && bmp.close();
+    return await new Promise(r => c.toBlob(r, "image/jpeg", .92));
+  } catch (e) { return file; }
+}
+
+/* ---------- Télécommande ---------- */
+function viewRemote() {
+  return `
+  <h1 class="large">Télécommande</h1>
+  <p class="sub">Glisse sur le pavé pour te déplacer, touche-le pour valider.</p>
+  <div class="remote">
+    <div class="pad" id="pad" role="application" aria-label="Pavé tactile">
+      <div class="ring"></div>
+      <button class="arrow up" data-key="up" aria-label="Haut">${I.up}</button>
+      <button class="arrow down" data-key="down" aria-label="Bas">${I.down}</button>
+      <button class="arrow left" data-key="left" aria-label="Gauche">${I.left}</button>
+      <button class="arrow right" data-key="right" aria-label="Droite">${I.right}</button>
+      <div class="center">OK</div>
+    </div>
+    <div class="keys">
+      <button class="key" data-key="back" aria-label="Retour">${I.back}</button>
+      <button class="key" data-key="home" aria-label="Accueil">${I.home}</button>
+      <button class="key" data-key="play" aria-label="Lecture ou pause">${I.pp}</button>
+      <div class="vol"><button data-key="volup" aria-label="Monter le son">${I.volup}</button><button data-key="voldown" aria-label="Baisser le son">${I.voldown}</button></div>
+      <button class="key" data-key="menu" aria-label="Menu">${I.menu}</button>
+      <button class="key" data-key="mute" aria-label="Couper le son">${I.mute}</button>
+      <button class="key" data-act="show" aria-label="Lancer les fonds">${I.discover}</button>
+    </div>
+    <div class="type"><label class="search">${I.search}<input id="txt" placeholder="Écrire sur la TV" enterkeyhint="send" autocomplete="off"></label>
+      <button class="btn small" data-act="send">Envoyer</button></div>
+  </div>
+  <h2>Applis</h2>
+  <div class="apps" id="apps">${S.apps ? appsHtml() : `<p class="note">Chargement…</p>`}</div>`;
+}
+const appsHtml = () => S.apps.map(a => `<button class="app-tile" data-app="${esc(a.pkg)}" aria-label="${esc(a.name)}"><span>${esc(a.name)}</span><img loading="lazy" src="/icon/${encodeURIComponent(a.pkg)}?t=${encodeURIComponent(S.token)}" alt="" onerror="this.remove()"></button>`).join("");
+after.remote = async () => {
+  const pad = $("#pad");
+  let start = null;
+  pad.addEventListener("pointerdown", e => { if (e.target.closest("[data-key]")) return; start = {x: e.clientX, y: e.clientY, t: Date.now()}; pad.setPointerCapture(e.pointerId); });
+  pad.addEventListener("pointermove", e => {
+    if (!start) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.hypot(dx, dy) > 42) { key(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")); start = {x: e.clientX, y: e.clientY, t: Date.now(), moved: true}; }
+  });
+  pad.addEventListener("pointerup", e => {
+    if (start && !start.moved && Date.now() - start.t < 450) {
+      const r = pad.getBoundingClientRect(), rip = document.createElement("i");
+      rip.className = "ripple"; rip.style.left = (e.clientX - r.left) + "px"; rip.style.top = (e.clientY - r.top) + "px";
+      pad.appendChild(rip); setTimeout(() => rip.remove(), 600); key("ok");
+    }
+    start = null;
+  });
+  $("#txt").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sendText(); } });
+  if (!S.apps) { try { S.apps = (await api("/api/apps")).apps; } catch (e) { S.apps = []; } const a = $("#apps"); if (a && S.view === "remote") a.innerHTML = appsHtml(); }
+};
+let keyChain = Promise.resolve();
+function key(k) {
+  buzz();
+  keyChain = keyChain.then(() => api("/api/remote", {json: {key: k}})).catch(e => toast(e.message, true));
+}
+function sendText() { const t = $("#txt"); if (!t.value) return; const v = t.value; t.value = ""; api("/api/remote", {json: {text: v}}).then(() => toast("Texte envoyé")).catch(e => toast(e.message, true)); }
+
+/* ---------- Sheets ---------- */
+function openSheet(html, wire) {
+  const sh = $("#sheet");
+  sh.innerHTML = `<div class="grab"></div><button class="close" aria-label="Fermer">${I.x}</button>` + html;
+  $(".close", sh).onclick = closeSheet;
+  $("#scrim").classList.add("on"); sh.scrollTop = 0;
+  requestAnimationFrame(() => sh.classList.add("on"));
+  wire && wire(sh);
+}
+function closeSheet() { $("#sheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
+$("#scrim").onclick = closeSheet;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+(() => { let y0 = null; const sh = $("#sheet");
+  sh.addEventListener("touchstart", e => { y0 = sh.scrollTop <= 0 ? e.touches[0].clientY : null; }, {passive: true});
+  sh.addEventListener("touchend", e => { if (y0 !== null && e.changedTouches[0].clientY - y0 > 110) closeSheet(); y0 = null; }, {passive: true}); })();
+
+/* ---------- One click handler for everything ---------- */
+async function onClick(e) {
+  const t = e.target.closest("button,[data-quick]");
+  if (!t) return;
+  const d = t.dataset;
+  if (d.go) return go(d.go);
+  if (d.key) return key(d.key);
+  if (d.quick !== undefined) {
+    e.stopPropagation();
+    const p = themeItems()[+d.quick];
+    if (p) addPick(p, defaultCollection(), false);
+    return;
+  }
+  if (d.pick !== undefined) return sheetPick(themeItems()[+d.pick]);
+  if (d.theme) { S.theme = d.theme; S.shown = 36; return render(); }
+  if (d.filter) { S.filter = d.filter; return render(); }
+  if (d.app) { buzz(); return api("/api/launch", {json: {pkg: d.app}}).then(() => toast("Ouvert sur la TV")).catch(x => toast(x.message, true)); }
+  if (d.wall) {
+    if (S.selecting) { S.selected.has(d.wall) ? S.selected.delete(d.wall) : S.selected.add(d.wall); t.classList.toggle("sel"); return selbar(); }
+    const w = items().find(x => x.id === d.wall); return w && sheetWall(w);
+  }
+  if (d.set) return setSaver(d.set, d.v, t);
+  switch (d.act) {
+    case "show": return showOnTv(null);
+    case "import": return importPhotos();
+    case "more": S.shown += 36; return render();
+    case "clear": S.search = null; return render();
+    case "send": return sendText();
+    case "select": S.selecting = !S.selecting; S.selected.clear(); return render();
+    case "newcol": {
+      const name = prompt("Nom de la nouvelle collection"); if (!name) return;
+      try { const r = await api("/api/collections", {json: {action: "create", name}}); await loadLib(); S.filter = r.id; render(); toast("Collection créée"); } catch (x) { toast(x.message, true); }
+      return;
+    }
+    case "rencol": {
+      const name = prompt("Nouveau nom", colName(S.filter)); if (!name) return;
+      try { await api("/api/collections", {json: {action: "rename", id: S.filter, name}}); await loadLib(); render(); } catch (x) { toast(x.message, true); }
+      return;
+    }
+    case "delcol": {
+      const n = items().filter(w => w.collection === S.filter).length;
+      const withItems = n > 0 && confirm(`Supprimer aussi ses ${n} fonds ?\nOK : les supprimer. Annuler : les garder dans une autre collection.`);
+      if (!confirm(`Supprimer la collection « ${colName(S.filter)} » ?`)) return;
+      try { await api("/api/collections", {json: {action: "delete", id: S.filter, withItems}}); await Promise.all([loadLib(), loadState()]); S.filter = "all"; render(); toast("Collection supprimée"); } catch (x) { toast(x.message, true); }
+      return;
+    }
+    case "bulkdel": if (confirm(`Supprimer ${S.selected.size} fonds de la TV ?`)) await removeWalls([...S.selected]); return;
+    case "bulkrot": { const ids = [...S.selected], on = !items().filter(w => ids.includes(w.id)).every(w => w.enabled); await update(ids, {enabled: on}); toast(on ? "Remis en rotation" : "Retirés de la rotation"); return; }
+    case "bulkmove": {
+      const ids = [...S.selected];
+      openSheet(`<h1 class="large" style="font-size:26px;margin-top:0">Déplacer ${ids.length} fonds</h1><div class="chips" style="flex-wrap:wrap;margin:12px 0 0">${cols().map(c => `<button class="chip" data-to="${esc(c.id)}">${esc(c.name)}</button>`).join("")}</div>`, sh => {
+        sh.querySelectorAll("[data-to]").forEach(b => b.onclick = async () => { closeSheet(); await update(ids, {collection: b.dataset.to}); S.selected.clear(); render(); toast("Rangés dans " + colName(b.dataset.to)); });
+      });
+      return;
+    }
+  }
+}
+async function setSaver(name, v, el) {
+  const change = {};
+  if (name === "clock" || name === "caption") change[name] = el.getAttribute("aria-checked") !== "true";
+  else if (name === "seconds") change.seconds = +v;
+  else change[name] = v;
+  if (name === "collection" && S.state.saver.mode !== "art") change.mode = "art";
+  try { S.state = await api("/api/settings", {json: change}); render(); } catch (x) { toast(x.message, true); }
+}
+
+window.addEventListener("hashchange", () => { const v = location.hash.replace("#", ""); if (S.lib && v && v !== S.view && TABS.some(t => t[0] === v)) go(v); });
+document.addEventListener("visibilitychange", async () => { if (!document.hidden && S.lib) { try { await Promise.all([loadState(), loadLib()]); if (S.view !== "remote") render(); } catch (e) {} } });
+boot();
+</script>
+</body>
+</html>

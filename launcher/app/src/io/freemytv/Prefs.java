@@ -298,9 +298,14 @@ final class Prefs {
 
     /** Which wallpapers the screensaver shows: "art", "landscape" or "all". */
     static final String[] SAVER_CATEGORIES = {"all", "art", "landscape"};
+    /** MaTV Connect: the phone's web app (Companion). */
+    static boolean connect() { return sp().getBoolean("connect", true); }
+    static void setConnect(boolean on) { put("connect", on); }
+
+    /** "all", or a wallpaper collection's id (Art checks it still exists). */
     static String saverCategory() {
         String v = sp().getString("saverCategory", "all");
-        return java.util.Arrays.asList(SAVER_CATEGORIES).contains(v) ? v : "all";
+        return v == null || v.isEmpty() ? "all" : v;
     }
     static void setSaverCategory(String v) { put("saverCategory", v); }
 

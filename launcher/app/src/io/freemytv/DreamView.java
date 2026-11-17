@@ -300,11 +300,17 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
 
     /** Art mode's paintings (read once per start, in a shuffled order); null until read again. */
     private List<Recs.Pick> artList;
+    /** The phone's Show on the TV: the wallpapers, whatever the screensaver is set to. */
+    boolean wallpapersOnly;
+    private int artVersion = -1;
 
     /** Art mode's paintings when it is on and some are ready, else your photos when they are on, otherwise the picks'. */
     private List<Recs.Pick> photos() {
-        if (Art.on()) {   // Art mode is paintings only: until the first ones are ready, the clock over the aurora
-            if (artList == null || artList.isEmpty()) artList = Art.picks(getContext());
+        if (wallpapersOnly || Art.on()) {   // Art mode is paintings only: until the first ones are ready, the clock over the aurora
+            if (artList == null || artList.isEmpty() || artVersion != Art.version) {
+                artVersion = Art.version;
+                artList = Art.picks(getContext());
+            }
             return artList;
         }
         return Photos.on(getContext()) ? Photos.picks(getContext()) : recs.showcase();

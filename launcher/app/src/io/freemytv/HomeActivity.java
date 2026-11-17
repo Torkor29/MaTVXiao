@@ -25,6 +25,7 @@ public class HomeActivity extends Activity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Watchdog.install(this);
+        Companion.start(this);   // MaTV Connect: the phone's web app
         SleepTimer.listen(this);
         SleepTimer.check(this);
         if (Watchdog.crashedTooOften(this)) {
